@@ -120,3 +120,11 @@ development_status:
   10-1-cross-tenant-order-lookup: done
   10-2-ticket-reissuance-with-qr-invalidation: done
   epic-10-retrospective: done
+
+  # Pre-Production Stabilization
+  # Phase 1: Critical Test Coverage + Code Review Fixes — DONE (2026-03-20)
+  stabilization-phase-1: done
+  # Phase 2: E2E Smoke Suite (Playwright) — pending
+  stabilization-phase-2: backlog
+  # Phase 3: Production Hardening — pending
+  stabilization-phase-3: backlog
