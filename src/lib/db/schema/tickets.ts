@@ -38,6 +38,7 @@ export const tickets = pgTable(
   (table) => [
     index("idx_tickets_tenant_id").on(table.tenantId),
     index("idx_tickets_event_id").on(table.eventId),
+    index("idx_tickets_ticket_type_id").on(table.ticketTypeId),
     uniqueIndex("idx_tickets_qr_hash").on(table.qrHash),
   ],
 );

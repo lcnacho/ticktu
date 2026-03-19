@@ -13,6 +13,31 @@ import { generateQrPayload } from "@/lib/qr/generate";
 import { and, eq, ilike, or, sql } from "drizzle-orm";
 import { inngestClient } from "@/lib/inngest/client";
 import { getProducerBySlugExists } from "@/lib/db/queries/producers";
+import { z } from "zod/v4";
+
+const createTenantSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
+  adminEmail: z.email("Invalid email format"),
+  adminPassword: z.string().min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain an uppercase letter")
+    .regex(/[0-9]/, "Password must contain a number"),
+  logoUrl: z.url().optional(),
+  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color"),
+  accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color"),
+  heroImageUrl: z.url().optional(),
+  heroTagline: z.string().max(200).optional(),
+  aboutText: z.string().max(2000).optional(),
+  socialLinks: z.record(z.string(), z.string()).optional(),
+  config: z.object({
+    heroVisible: z.boolean(),
+    socialVisible: z.boolean(),
+    aboutVisible: z.boolean(),
+  }),
+  currency: z.enum(["UYU", "USD", "ARS", "BRL"]),
+  feePercentage: z.number().min(0).max(50),
+  feeFixed: z.number().min(0).max(100000),
+});
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -202,6 +227,7 @@ export async function reissueTicketAction(
 
   // Create audit record
   await db.insert(ticketReissuances).values({
+    tenantId: ticket.tenantId,
     ticketId,
     adminUserId: auth.user.id,
     reason: reason.trim(),
@@ -246,6 +272,21 @@ export async function createTenantAction(
   const auth = await requireSuperAdmin();
   if (auth.error) {
     return { success: false, error: auth.error };
+  }
+
+  // Validate input
+  const validated = createTenantSchema.safeParse(input);
+  if (!validated.success) {
+    const firstIssue = validated.error.issues[0];
+    return {
+      success: false,
+      error: createAppError(
+        "VALIDATION_ERROR",
+        firstIssue.message,
+        400,
+        firstIssue.path.join("."),
+      ),
+    };
   }
 
   // Validate slug uniqueness

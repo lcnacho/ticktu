@@ -19,7 +19,8 @@ async function BoleteriaContent() {
   if (!tenantId) notFound();
 
   const producer = await getProducerByTenantId(tenantId);
-  const currency = producer?.currency ?? "UYU";
+  if (!producer) notFound();
+  const currency = producer.currency;
 
   // Only show published events for POS
   const events = await getEventsByTenant(tenantId, "published");

@@ -23,6 +23,7 @@ export const eventAccessCodes = pgTable(
   (table) => [
     index("idx_event_access_codes_event_id").on(table.eventId),
     index("idx_event_access_codes_code").on(table.code),
+    index("idx_event_access_codes_tenant_id").on(table.tenantId),
   ],
 );
 

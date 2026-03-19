@@ -18,6 +18,7 @@ type SessionData = {
   tenantId: string;
   operatorName: string;
   deviceId: string;
+  sessionToken: string;
 };
 
 export default function ScanPage() {
@@ -49,7 +50,10 @@ export default function ScanPage() {
       try {
         const res = await fetch("/api/validation/scan", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.sessionToken}`,
+          },
           body: JSON.stringify({
             qrHash: decodedText,
             operatorName: session.operatorName,

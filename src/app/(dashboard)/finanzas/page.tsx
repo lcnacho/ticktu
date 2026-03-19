@@ -22,7 +22,8 @@ async function FinanzasContent() {
   if (!tenantId) notFound();
 
   const producer = await getProducerByTenantId(tenantId);
-  const currency = producer?.currency ?? "UYU";
+  if (!producer) notFound();
+  const currency = producer.currency;
 
   const [finance, expenses, expensesByCategory, events] = await Promise.all([
     getFinanceSummary(tenantId),

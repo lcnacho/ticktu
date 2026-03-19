@@ -22,6 +22,7 @@ export const orderItems = pgTable(
   (table) => [
     index("idx_order_items_tenant_id").on(table.tenantId),
     index("idx_order_items_order_id").on(table.orderId),
+    index("idx_order_items_ticket_type_id").on(table.ticketTypeId),
   ],
 );
 

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { TicketType } from "@/lib/db/schema/ticket-types";
-import { TicketQuantitySelector } from "@/components/buyer/ticket-quantity-selector";
+import { TicketQuantitySelector } from "@/components/shared/ticket-quantity-selector";
 import { formatMoney, calculateServiceFee } from "@/lib/utils/money";
 
 type TicketSelectorSectionProps = {

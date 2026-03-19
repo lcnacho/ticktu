@@ -47,7 +47,7 @@ export default function ValidationEntryPage() {
         return;
       }
 
-      const { eventId, tenantId } = await res.json();
+      const { eventId, tenantId, sessionToken } = await res.json();
 
       // Store in sessionStorage for the scanner
       sessionStorage.setItem(
@@ -57,6 +57,7 @@ export default function ValidationEntryPage() {
           tenantId,
           operatorName: data.operatorName,
           deviceId: crypto.randomUUID(),
+          sessionToken,
         }),
       );
 

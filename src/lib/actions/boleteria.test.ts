@@ -191,12 +191,14 @@ describe("createBoleteriaOrderAction", () => {
     });
     vi.mocked(getEventById).mockResolvedValue({ id: EVENT_ID } as never);
     vi.mocked(getTicketTypeById).mockResolvedValue({ id: TT_ID, price: 1000, isActive: true } as never);
+    vi.mocked(getProducerByTenantId).mockResolvedValue({ currency: "UYU" } as never);
     vi.mocked(atomicIncrementSoldCount).mockResolvedValue(false);
 
     const result = await createBoleteriaOrderAction(baseFormData);
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error.code).toBe("CAPACITY_EXCEEDED");
-    expect(mockTransaction).not.toHaveBeenCalled();
+    // Capacity check is now inside the transaction — transaction is called but rolls back
+    expect(mockTransaction).toHaveBeenCalledOnce();
   });
 
   it("defaults buyerEmail to boleteria@ticktu.com when not provided", async () => {

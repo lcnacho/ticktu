@@ -48,7 +48,7 @@ export async function createExpenseAction(formData: {
       success: false,
       error: createAppError(
         "VALIDATION_ERROR",
-        "La descripcion es obligatoria",
+        "La descripción es obligatoria",
         400,
         "description",
       ),
@@ -67,7 +67,10 @@ export async function createExpenseAction(formData: {
   }
 
   const producer = await getProducerByTenantId(tenantId);
-  const currency = producer?.currency ?? "UYU";
+  if (!producer) {
+    return { success: false, error: createAppError("NOT_FOUND", "Producer not found", 404) };
+  }
+  const currency = producer.currency;
 
   const expense = await createExpenseQuery({
     tenantId,

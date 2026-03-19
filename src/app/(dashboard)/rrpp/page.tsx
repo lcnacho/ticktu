@@ -21,7 +21,8 @@ async function RRPPContent() {
   if (!tenantId) notFound();
 
   const producer = await getProducerByTenantId(tenantId);
-  const currency = producer?.currency ?? "UYU";
+  if (!producer) notFound();
+  const currency = producer.currency;
 
   const [promoters, performance] = await Promise.all([
     getPromotersByTenant(tenantId),

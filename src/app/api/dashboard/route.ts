@@ -21,7 +21,10 @@ export async function GET() {
   }
 
   const producer = await getProducerByTenantId(tenantId);
-  const currency = producer?.currency ?? "UYU";
+  if (!producer) {
+    return NextResponse.json({ error: "Producer not found" }, { status: 404 });
+  }
+  const currency = producer.currency;
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);

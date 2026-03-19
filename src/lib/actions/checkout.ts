@@ -5,14 +5,13 @@ import { revalidateTag } from "next/cache";
 import { createAppError, type AppError } from "@/lib/errors/app-error";
 import { getProducerBySlug } from "@/lib/db/queries/producers";
 import { getTicketTypeById } from "@/lib/db/queries/ticket-types";
-import {
-  createOrder,
-  createOrderItems,
-  atomicIncrementSoldCount,
-} from "@/lib/db/queries/orders";
+import { atomicIncrementSoldCount } from "@/lib/db/queries/orders";
 import { getLinkByCode } from "@/lib/db/queries/rrpp";
 import { mercadopagoAdapter } from "@/lib/payments/mercadopago-client";
 import { calculateServiceFee } from "@/lib/utils/money";
+import { db } from "@/lib/db/index";
+import { orders } from "@/lib/db/schema/orders";
+import { orderItems } from "@/lib/db/schema/order-items";
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -97,7 +96,9 @@ export async function createCheckoutAction(formData: {
     itemsByType.set(item.ticketTypeId, existing);
   }
 
-  for (const [ticketTypeId, items] of itemsByType) {
+  // Pre-validate ticket types before transaction
+  const ticketTypeMap = new Map<string, Awaited<ReturnType<typeof getTicketTypeById>>>();
+  for (const [ticketTypeId] of itemsByType) {
     const tt = await getTicketTypeById(tenantId, ticketTypeId);
     if (!tt || !tt.isActive) {
       return {
@@ -109,83 +110,109 @@ export async function createCheckoutAction(formData: {
         ),
       };
     }
-
-    // Atomic capacity check
-    const success = await atomicIncrementSoldCount(
-      tenantId,
-      ticketTypeId,
-      items.length,
-    );
-    if (!success) {
-      return {
-        success: false,
-        error: createAppError(
-          "CAPACITY_EXCEEDED",
-          "Entradas agotadas para este tipo",
-          400,
-        ),
-      };
-    }
-
-    for (const item of items) {
-      const fee = calculateServiceFee(
-        tt.price,
-        producer.feePercentage,
-        producer.feeFixed,
-      );
-      totalAmount += tt.price + fee;
-      totalFee += fee;
-
-      orderItemsData.push({
-        ticketTypeId,
-        quantity: 1,
-        unitPrice: tt.price,
-        feeAmount: fee,
-        holderName: item.holderName,
-        holderEmail: item.holderEmail,
-      });
-    }
+    ticketTypeMap.set(ticketTypeId, tt);
   }
 
-  // 4. Resolve RRPP attribution
+  // 4. Resolve RRPP attribution (sanitize rrppRef — alphanumeric only)
   let rrppLinkId: string | undefined;
-  if (formData.rrppRef) {
-    const link = await getLinkByCode(formData.rrppRef);
+  const sanitizedRrppRef = formData.rrppRef?.replace(/[^a-zA-Z0-9_-]/g, "");
+  if (sanitizedRrppRef) {
+    const link = await getLinkByCode(sanitizedRrppRef);
     if (link && link.tenantId === tenantId) {
       rrppLinkId = link.id;
     }
   }
 
-  // 5. Create order
-  const order = await createOrder({
-    tenantId,
-    eventId: formData.eventId,
-    buyerName: formData.buyerName.trim(),
-    buyerEmail: formData.buyerEmail.trim(),
-    paymentMethod: "mercadopago",
-    totalAmount,
-    feeAmount: totalFee,
-    currency: producer.currency,
-    rrppLinkId,
+  // 5. Create order inside transaction — capacity increment + order + items are atomic
+  const order = await db.transaction(async (tx) => {
+    for (const [ticketTypeId, items] of itemsByType) {
+      const tt = ticketTypeMap.get(ticketTypeId)!;
+
+      // Atomic capacity check — inside transaction
+      const success = await atomicIncrementSoldCount(
+        tenantId,
+        ticketTypeId,
+        items.length,
+        tx,
+      );
+      if (!success) {
+        throw new Error("CAPACITY_EXCEEDED");
+      }
+
+      for (const item of items) {
+        const fee = calculateServiceFee(
+          tt.price,
+          producer.feePercentage,
+          producer.feeFixed,
+        );
+        totalAmount += tt.price + fee;
+        totalFee += fee;
+
+        orderItemsData.push({
+          ticketTypeId,
+          quantity: 1,
+          unitPrice: tt.price,
+          feeAmount: fee,
+          holderName: item.holderName,
+          holderEmail: item.holderEmail,
+        });
+      }
+    }
+
+    // Create order
+    const [newOrder] = await tx.insert(orders).values({
+      tenantId,
+      eventId: formData.eventId,
+      buyerName: formData.buyerName.trim(),
+      buyerEmail: formData.buyerEmail.trim(),
+      paymentMethod: "mercadopago",
+      totalAmount,
+      feeAmount: totalFee,
+      currency: producer.currency,
+      rrppLinkId,
+    }).returning();
+
+    // Create order items
+    await tx.insert(orderItems).values(
+      orderItemsData.map((item) => ({
+        ...item,
+        tenantId,
+        orderId: newOrder.id,
+      })),
+    );
+
+    return newOrder;
+  }).catch((err: Error) => {
+    if (err.message === "CAPACITY_EXCEEDED") return null;
+    throw err;
   });
 
-  // 6. Create order items
-  await createOrderItems(
-    orderItemsData.map((item) => ({
-      ...item,
-      tenantId,
-      orderId: order.id,
-    })),
-  );
+  if (!order) {
+    return {
+      success: false,
+      error: createAppError(
+        "CAPACITY_EXCEEDED",
+        "Entradas agotadas para este tipo",
+        400,
+      ),
+    };
+  }
 
   // 7. Create MercadoPago preference
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ticktu.com";
+  const rawBaseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://ticktu.com";
+  let baseUrl: string;
+  try {
+    const parsed = new URL(rawBaseUrl);
+    baseUrl = parsed.origin;
+  } catch {
+    baseUrl = "https://ticktu.com";
+  }
   const callbackBase = `${baseUrl}/${formData.producerSlug}/events/${formData.eventId}`;
 
   const preference = await mercadopagoAdapter.createPreference({
     orderId: order.id,
     buyerEmail: formData.buyerEmail,
-    externalReference: `${order.id}${rrppLinkId ? `|${formData.rrppRef}` : ""}`,
+    externalReference: `${order.id}${rrppLinkId ? `|${sanitizedRrppRef}` : ""}`,
     items: orderItemsData.map((item) => ({
       title: `Entrada - ${item.holderName}`,
       quantity: item.quantity,

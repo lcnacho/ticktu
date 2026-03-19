@@ -7,6 +7,7 @@ import {
 
 export const ticketReissuances = pgTable("ticket_reissuances", {
   id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
   ticketId: uuid("ticket_id").notNull(),
   adminUserId: uuid("admin_user_id").notNull(),
   reason: text("reason").notNull(),

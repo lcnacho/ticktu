@@ -54,20 +54,23 @@ export async function createBoleteriaOrderAction(formData: {
     return { success: false, error: createAppError("NOT_FOUND", "Tipo de entrada no disponible", 400) };
   }
 
-  // Atomic capacity check
-  const success = await atomicIncrementSoldCount(tenantId, formData.ticketTypeId, formData.quantity);
-  if (!success) {
-    return { success: false, error: createAppError("CAPACITY_EXCEEDED", "Entradas agotadas", 400) };
-  }
-
   const producer = await getProducerByTenantId(tenantId);
-  const currency = producer?.currency ?? "UYU";
+  if (!producer) {
+    return { success: false, error: createAppError("NOT_FOUND", "Producer not found", 404) };
+  }
+  const currency = producer.currency;
 
   const totalAmount = tt.price * formData.quantity;
   const buyerName = formData.buyerName.trim();
   const buyerEmail = formData.buyerEmail?.trim() || "boleteria@ticktu.com";
 
   const order = await db.transaction(async (tx) => {
+    // Atomic capacity check — inside transaction to prevent corruption on rollback
+    const success = await atomicIncrementSoldCount(tenantId, formData.ticketTypeId, formData.quantity, tx);
+    if (!success) {
+      throw new Error("CAPACITY_EXCEEDED");
+    }
+
     // Create order
     const [newOrder] = await tx.insert(orders).values({
       tenantId,
@@ -118,7 +121,14 @@ export async function createBoleteriaOrderAction(formData: {
       .where(and(eq(orders.tenantId, tenantId), eq(orders.id, newOrder.id)));
 
     return newOrder;
+  }).catch((err: Error) => {
+    if (err.message === "CAPACITY_EXCEEDED") return null;
+    throw err;
   });
+
+  if (!order) {
+    return { success: false, error: createAppError("CAPACITY_EXCEEDED", "Entradas agotadas", 400) };
+  }
 
   after(async () => {
     revalidateTag(`event-${formData.eventId}`, "default");

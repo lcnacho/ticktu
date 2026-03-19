@@ -164,7 +164,7 @@ export async function getRRPPPerformanceByTenant(
     .select({
       promoterId: rrppPromoters.id,
       promoterName: rrppPromoters.name,
-      ticketsSold: sql<number>`coalesce(sum(${orders.totalAmount})::int / nullif(avg(${orders.totalAmount})::int, 0), 0)`,
+      ticketsSold: sql<number>`count(${orders.id})::int`,
       revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
     })
     .from(rrppPromoters)

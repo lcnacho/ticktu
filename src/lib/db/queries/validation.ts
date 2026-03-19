@@ -31,7 +31,7 @@ export async function createEventAccessCode(data: {
   eventId: string;
   expiresAt?: Date;
 }): Promise<EventAccessCode> {
-  const code = randomBytes(3).toString("hex").toUpperCase();
+  const code = randomBytes(4).toString("hex").toUpperCase();
   const [result] = await db
     .insert(eventAccessCodes)
     .values({ ...data, code })
@@ -71,6 +71,7 @@ export async function deactivateEventAccessCode(
 }
 
 export async function getTicketByQrHash(
+  tenantId: string,
   qrHash: string,
   eventId: string,
 ): Promise<{
@@ -89,19 +90,24 @@ export async function getTicketByQrHash(
     .from(tickets)
     .innerJoin(ticketTypes, eq(ticketTypes.id, tickets.ticketTypeId))
     .where(
-      and(eq(tickets.qrHash, qrHash), eq(tickets.eventId, eventId)),
+      and(
+        eq(tickets.tenantId, tenantId),
+        eq(tickets.qrHash, qrHash),
+        eq(tickets.eventId, eventId),
+      ),
     )
     .limit(1);
   return result ?? null;
 }
 
 export async function markTicketAsUsed(
+  tenantId: string,
   ticketId: string,
 ): Promise<void> {
   await db
     .update(tickets)
     .set({ status: "used", updatedAt: new Date() })
-    .where(eq(tickets.id, ticketId));
+    .where(and(eq(tickets.tenantId, tenantId), eq(tickets.id, ticketId)));
 }
 
 export async function createScan(data: {
@@ -162,6 +168,7 @@ export async function getCheckinStats(
 }
 
 export async function getTicketManifest(
+  tenantId: string,
   eventId: string,
 ) {
   return db
@@ -173,5 +180,7 @@ export async function getTicketManifest(
     })
     .from(tickets)
     .innerJoin(ticketTypes, eq(ticketTypes.id, tickets.ticketTypeId))
-    .where(eq(tickets.eventId, eventId));
+    .where(
+      and(eq(tickets.tenantId, tenantId), eq(tickets.eventId, eventId)),
+    );
 }

@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import type { Event } from "@/lib/db/schema/events";
 import type { TicketType } from "@/lib/db/schema/ticket-types";
-import { TicketQuantitySelector } from "@/components/buyer/ticket-quantity-selector";
+import { TicketQuantitySelector } from "@/components/shared/ticket-quantity-selector";
 import { formatMoney } from "@/lib/utils/money";
 import { createBoleteriaOrderAction } from "@/lib/actions/boleteria";
 

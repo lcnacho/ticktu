@@ -23,7 +23,8 @@ async function CustomersContent({
   if (!tenantId) notFound();
 
   const producer = await getProducerByTenantId(tenantId);
-  const currency = producer?.currency ?? "UYU";
+  if (!producer) notFound();
+  const currency = producer.currency;
 
   const customers = await getCustomersByTenant(tenantId, q);
 

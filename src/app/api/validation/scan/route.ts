@@ -4,19 +4,46 @@ import {
   markTicketAsUsed,
   createScan,
 } from "@/lib/db/queries/validation";
+import { verifySessionToken } from "@/lib/validation/session-token";
+import { z } from "zod/v4";
+
+const scanBodySchema = z.object({
+  qrHash: z.string().min(1),
+  eventId: z.string().min(1),
+  tenantId: z.string().min(1),
+  operatorName: z.string().min(1),
+  deviceId: z.string().min(1),
+  scannedAt: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
-  const { qrHash, eventId, tenantId, operatorName, deviceId, scannedAt } =
-    await request.json();
+  // Verify session token
+  const authHeader = request.headers.get("authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  if (!qrHash || !eventId || !tenantId || !operatorName || !deviceId) {
+  const session = verifySessionToken(token);
+  if (!session) {
+    return NextResponse.json({ error: "Invalid or expired session" }, { status: 401 });
+  }
+
+  const raw = await request.json();
+  const parsed = scanBodySchema.safeParse(raw);
+
+  if (!parsed.success) {
     return NextResponse.json(
       { error: "Missing required fields" },
       { status: 400 },
     );
   }
 
-  const ticket = await getTicketByQrHash(qrHash, eventId);
+  const { qrHash, operatorName, deviceId, scannedAt } = parsed.data;
+  // Use eventId and tenantId from the verified token, not from user input
+  const { eventId, tenantId } = session;
+
+  const ticket = await getTicketByQrHash(tenantId, qrHash, eventId);
 
   if (!ticket) {
     await createScan({
@@ -73,7 +100,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  await markTicketAsUsed(ticket.ticketId);
+  await markTicketAsUsed(tenantId, ticket.ticketId);
 
   await createScan({
     tenantId,

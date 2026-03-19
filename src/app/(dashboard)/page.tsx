@@ -19,7 +19,8 @@ async function DashboardContent() {
   if (!tenantId) notFound();
 
   const producer = await getProducerByTenantId(tenantId);
-  const currency = producer?.currency ?? "UYU";
+  if (!producer) notFound();
+  const currency = producer.currency;
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);

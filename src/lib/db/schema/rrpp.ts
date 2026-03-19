@@ -40,7 +40,7 @@ export const rrppLinks = pgTable(
     tenantId: uuid("tenant_id").notNull(),
     eventId: uuid("event_id").notNull(),
     promoterId: uuid("promoter_id").notNull(),
-    code: text("code").notNull().unique(),
+    code: text("code").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -49,7 +49,7 @@ export const rrppLinks = pgTable(
   (table) => [
     index("idx_rrpp_links_tenant_id").on(table.tenantId),
     index("idx_rrpp_links_event_id").on(table.eventId),
-    index("idx_rrpp_links_code").on(table.code),
+    uniqueIndex("idx_rrpp_links_tenant_code").on(table.tenantId, table.code),
     uniqueIndex("idx_rrpp_links_event_promoter").on(
       table.eventId,
       table.promoterId,

@@ -4,6 +4,15 @@ import { db } from "@/lib/db/index";
 import { tickets } from "@/lib/db/schema/tickets";
 import { ticketTypes } from "@/lib/db/schema/ticket-types";
 import { and, eq } from "drizzle-orm";
+import { z } from "zod/v4";
+
+const paramsSchema = z.object({
+  orderId: z.string().uuid(),
+});
+
+const querySchema = z.object({
+  tenantId: z.string().uuid(),
+});
 
 export async function GET(
   request: NextRequest,
@@ -18,11 +27,20 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { orderId } = await params;
-  const tenantId = request.nextUrl.searchParams.get("tenantId");
-  if (!tenantId) {
-    return NextResponse.json({ error: "tenantId required" }, { status: 400 });
+  const rawParams = await params;
+  const parsedParams = paramsSchema.safeParse(rawParams);
+  if (!parsedParams.success) {
+    return NextResponse.json({ error: "Invalid orderId" }, { status: 400 });
   }
+  const { orderId } = parsedParams.data;
+
+  const parsedQuery = querySchema.safeParse({
+    tenantId: request.nextUrl.searchParams.get("tenantId"),
+  });
+  if (!parsedQuery.success) {
+    return NextResponse.json({ error: "Valid tenantId required" }, { status: 400 });
+  }
+  const { tenantId } = parsedQuery.data;
 
   const result = await db
     .select({

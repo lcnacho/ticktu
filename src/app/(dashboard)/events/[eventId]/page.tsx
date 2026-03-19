@@ -74,9 +74,10 @@ async function EventDetailContent({
   if (!event) notFound();
 
   const producer = await getProducerByTenantId(tenantId);
-  const currency = producer?.currency ?? "UYU";
-  const feePercentage = producer?.feePercentage ?? 5;
-  const feeFixed = producer?.feeFixed ?? 0;
+  if (!producer) notFound();
+  const currency = producer.currency;
+  const feePercentage = producer.feePercentage;
+  const feeFixed = producer.feeFixed;
 
   // Load ticket types + batches only for tabs that need them
   const needsTicketTypes = ["configuracion", "cortesias"].includes(currentTab);

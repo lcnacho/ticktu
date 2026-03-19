@@ -108,8 +108,10 @@ export async function atomicIncrementSoldCount(
   tenantId: string,
   ticketTypeId: string,
   quantity: number,
+  tx?: Parameters<Parameters<typeof db.transaction>[0]>[0],
 ): Promise<boolean> {
-  const result = await db
+  const executor = tx ?? db;
+  const result = await executor
     .update(ticketTypes)
     .set({
       soldCount: sql`${ticketTypes.soldCount} + ${quantity}`,
