@@ -50,7 +50,7 @@ Ticktu provides each producer with:
 2. **Complete Event Management**: Draft/publish workflows, batch releases, RRPP tracking, complimentary tickets
 3. **Customer Intelligence**: Buyer database, purchase patterns, attendance analytics
 4. **Operational Tools**: Real-time dashboards, support tools, post-event settlements
-5. **Reliable Infrastructure**: Mobile-first purchasing, offline-capable validation, multi-device scanning
+5. **Reliable Infrastructure**: Mobile-first purchasing, online-first validation with connection status indicator _(offline capability descoped 2026-03-19)_, multi-device scanning
 
 The platform is built as multi-tenant SaaS—complete infrastructure built once, replicated for each client.
 
@@ -159,7 +159,7 @@ Typically employees of the production company, already familiar with similar too
 - Intuitive interface (usable in 5 minutes without training)
 - Scan speed under 2 seconds
 - Clear visual feedback (green = valid, red = stop)
-- Offline capability with sync on reconnect
+- Online-first validation with connection status indicator ("Sin conexión" banner) — ~~offline capability with sync on reconnect~~ descoped 2026-03-19
 - Multi-device support for large events
 
 #### RRPP (PR/Promoters)
@@ -380,7 +380,7 @@ The MVP delivers complete ticketing infrastructure - not a stripped-down version
 
 #### 12. Ticket Validation App
 - QR code scanning
-- Offline capability with sync on reconnect
+- Online-first validation with connection status indicator ("Sin conexión" banner) — ~~offline capability with sync on reconnect~~ descoped 2026-03-19
 - Multi-device support for large events
 - Clear visual feedback (valid/invalid/already used)
 - Sub-2-second validation speed
@@ -424,7 +424,7 @@ The MVP is successful when:
 |----------|------------|
 | Odisea runs first event | Zero critical issues during live event |
 | Buyers complete purchases | High completion rate from landing to confirmation |
-| Tickets validate at door | Validation app works reliably, including offline |
+| Tickets validate at door | Validation app works reliably online with connection status indicator _(offline descoped 2026-03-19)_ |
 | Producer sees value | Access to metrics they never had before |
 | Platform stays up | No downtime during sales windows |
 | Revenue flows correctly | Fee collection and settlement work accurately |

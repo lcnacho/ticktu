@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { db } from "@/lib/db/index";
 import { producers, type Producer } from "@/lib/db/schema/producers";
 
@@ -37,6 +37,22 @@ export async function getProducerBranding(tenantId: string) {
     .where(and(eq(producers.tenantId, tenantId), eq(producers.isActive, true)))
     .limit(1);
   return producer ?? null;
+}
+
+export async function getAllProducers(): Promise<Producer[]> {
+  return db
+    .select()
+    .from(producers)
+    .orderBy(desc(producers.createdAt));
+}
+
+export async function getProducerBySlugExists(slug: string): Promise<boolean> {
+  const [existing] = await db
+    .select({ id: producers.id })
+    .from(producers)
+    .where(eq(producers.slug, slug))
+    .limit(1);
+  return !!existing;
 }
 
 export async function updateProducer(

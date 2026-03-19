@@ -1,7 +1,6 @@
 /// <reference lib="webworker" />
 
-// Serwist service worker entry point
-// Actual offline caching configuration deferred to Epic 7
+// Minimal service worker for PWA registration (no offline caching)
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 

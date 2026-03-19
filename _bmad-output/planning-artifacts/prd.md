@@ -21,7 +21,7 @@ classification:
     - 'Multi-tenant data isolation'
     - 'Payment security (PCI compliance)'
     - 'High availability during sales windows'
-    - 'Offline capability for validation'
+    - 'Online-first validation with connection status indicator (descoped from offline 2026-03-19)'
 lastEdited: '2026-03-14'
 editHistory:
   - date: '2026-03-14'
@@ -107,7 +107,7 @@ Ticktu is a white-label ticketing platform for event producers in Uruguay, offer
 | Payment success rate | 99%+ | Per event |
 | Ticket delivery rate | 100% | Per event |
 | QR validation speed | < 2 seconds | Per scan |
-| Offline sync reliability | 100% data integrity | Per event |
+| ~~Offline sync reliability~~ | ~~100% data integrity~~ | _(Descoped to online-first 2026-03-19)_ |
 
 ### Measurable Outcomes
 
@@ -144,7 +144,7 @@ This single metric captures:
 9. Customer Database (buyer info, purchase history)
 10. Real-Time Dashboard (sales monitoring, analytics)
 11. Support/Admin Tools (order lookup, ticket reissuance)
-12. Ticket Validation App (QR scanning, offline-capable)
+12. Ticket Validation App (QR scanning, online-first with connection status indicator — ~~offline-capable~~ descoped 2026-03-19)
 13. Post-Event Settlement (producer earnings summary)
 
 ### Growth Features (Post-MVP)
@@ -265,7 +265,7 @@ Carlos arrives at the venue 30 minutes before doors open. He's been told to down
 4. **Ready State** - App shows "Ready to Scan" with event name displayed
 5. **First Scan** - Guest shows QR. Carlos points camera. Green checkmark + ticket info appears in <2 seconds
 6. **Invalid Scan** - Someone tries a screenshot of a friend's ticket. Red X - "Already Used"
-7. **Offline Mode** - Venue has spotty wifi. App continues working, syncing when connection returns
+7. **Connection Loss** - Venue has spotty wifi. App shows "Sin conexión" banner; operator waits for connection to return and resumes scanning _(offline scanning descoped to online-first 2026-03-19)_
 
 **Climax:**
 Peak entry time hits. Carlos is scanning 50+ people in 10 minutes. Every scan is instant. No line backup. No angry guests.
@@ -273,7 +273,7 @@ Peak entry time hits. Carlos is scanning 50+ people in 10 minutes. Every scan is
 **Resolution:**
 End of night, Carlos has scanned 400 tickets. All synced to dashboard. Odisea can see exactly who entered and when.
 
-**Capabilities Revealed:** Validation app, event code system, operator identification, fast QR scanning, duplicate detection, offline capability, sync on reconnect, scan tracking
+**Capabilities Revealed:** Validation app, event code system, operator identification, fast QR scanning, duplicate detection, connection status indicator, scan tracking _(offline capability and sync descoped to online-first 2026-03-19)_
 
 ---
 
@@ -330,13 +330,13 @@ Producer is self-sufficient for event creation. They only contact Ticktu for bra
 | Producer Success | Event lifecycle, dashboard, settlement, RRPP tracking |
 | Buyer Success | Purchase flow, guest checkout, payment, email delivery |
 | Buyer Edge Case | Error handling, cart preservation, retry flow |
-| Door Operator | Validation app, offline mode, scan tracking |
+| Door Operator | Validation app, connection status indicator, scan tracking _(offline mode descoped 2026-03-19)_ |
 | Event Cancellation | Refund processing, customer communication |
 | Ticktu Admin | Producer onboarding, branding config, account management |
 
 **Critical Paths Identified:**
 1. **Purchase → Payment → Delivery** - Must be flawless (revenue depends on it)
-2. **Scan → Validate → Entry** - Must work offline (event success depends on it)
+2. **Scan → Validate → Entry** - Must work reliably online with clear connection status feedback (event success depends on it) _(offline capability descoped 2026-03-19)_
 3. **Onboarding → Live** - Must be smooth (first impression with producer)
 
 ---
@@ -364,10 +364,11 @@ Producer is self-sufficient for event creation. They only contact Ticktu for bra
 - **Duplicate Detection**: Same QR cannot be used twice
 - **Screenshot Protection**: QR validation includes ticket holder info display
 
-### Offline Operations
-- **Validation App**: Must cache event data and work without internet
-- **Sync Recovery**: Must reconcile when connection restored
-- **Conflict Resolution**: Handle edge cases (ticket validated on two devices offline)
+### Offline Operations _(Descoped to online-first 2026-03-19)_
+- **Validation App**: Online-first — requires internet connectivity to scan. Displays "Sin conexión" banner when offline. ~~Must cache event data and work without internet~~ (descoped)
+- **Sync Recovery**: ~~Must reconcile when connection restored~~ — No offline scans to reconcile; operator simply resumes scanning (descoped)
+- **Conflict Resolution**: ~~Handle edge cases (ticket validated on two devices offline)~~ — With online-first, duplicate detection is centralized and real-time (descoped)
+- **Future consideration**: Full offline scanning with IndexedDB cache, sync queue, and conflict resolution may be added post-MVP
 
 ---
 
@@ -536,8 +537,8 @@ Ticktu is a multi-tenant B2B SaaS platform where each tenant (producer) gets an 
 | FR-VA-01 | Validation app authenticates to a specific event via event code and operator name |
 | FR-VA-02 | QR scan validates ticket and displays result (valid + ticket info, or invalid + reason) in under 2 seconds |
 | FR-VA-03 | Duplicate QR scans are rejected with clear "Already Used" indication |
-| FR-VA-04 | Validation app caches event ticket data and operates fully offline when internet is unavailable |
-| FR-VA-05 | Offline validations sync automatically when connectivity is restored, maintaining 100% data integrity |
+| FR-VA-04 | ~~Validation app caches event ticket data and operates fully offline when internet is unavailable~~ _(Descoped to online-first 2026-03-19)_ — Validation app displays a connection status indicator; when offline, a "Sin conexión" banner informs the operator they cannot scan |
+| FR-VA-05 | ~~Offline validations sync automatically when connectivity is restored, maintaining 100% data integrity~~ _(Descoped to online-first 2026-03-19)_ — When connectivity returns, the operator simply resumes scanning; no sync queue needed |
 | FR-VA-06 | Each scan is tracked with operator identity, timestamp, and device for audit purposes |
 
 ### Admin & Support
@@ -567,7 +568,7 @@ Ticktu is a multi-tenant B2B SaaS platform where each tenant (producer) gets an 
 |----|------------|
 | NFR-AV-01 | Platform maintains 99.9%+ uptime during active ticket sales windows as measured by uptime monitoring |
 | NFR-AV-02 | Payment processing failures do not cascade — if analytics or non-critical services fail, purchase flow continues operating |
-| NFR-AV-03 | Validation app operates fully offline with cached event data; zero dependency on internet connectivity during event |
+| NFR-AV-03 | ~~Validation app operates fully offline with cached event data~~ _(Descoped to online-first 2026-03-19)_ — Validation app requires internet connectivity; displays "Sin conexión" banner when offline |
 
 ### Scalability
 
@@ -590,8 +591,8 @@ Ticktu is a multi-tenant B2B SaaS platform where each tenant (producer) gets an 
 
 | ID | Requirement |
 |----|------------|
-| NFR-DI-01 | Offline validation syncs maintain 100% data integrity — no scans lost on reconnection as verified by reconciliation checks |
-| NFR-DI-02 | Offline conflict resolution handles edge case of same ticket validated on two devices offline with clear resolution strategy |
+| NFR-DI-01 | ~~Offline validation syncs maintain 100% data integrity~~ _(Descoped to online-first 2026-03-19)_ — All scans are online; no offline sync needed |
+| NFR-DI-02 | ~~Offline conflict resolution handles edge case of same ticket validated on two devices offline~~ _(Descoped to online-first 2026-03-19)_ — With online-first, duplicate detection is centralized and real-time |
 | NFR-DI-03 | Payment success rate of 99%+ as measured per event (failures are MercadoPago-side, not Ticktu-side) |
 | NFR-DI-04 | Ticket delivery rate of 100% — every successful payment results in delivered tickets as measured per event |
 
@@ -642,7 +643,7 @@ Ticktu is a multi-tenant B2B SaaS platform where each tenant (producer) gets an 
 | 9 | Customer Database | Data value proposition |
 | 10 | Real-Time Dashboard | Data value proposition |
 | 11 | Support/Admin Tools | Operations sustainability |
-| 12 | Ticket Validation App | Event execution critical |
+| 12 | Ticket Validation App (online-first) | Event execution critical |
 | 13 | Post-Event Settlement | Financial reconciliation |
 
 **Nothing Cut:** All 13 features are committed for MVP. No artificial time pressure requiring scope reduction.
@@ -673,7 +674,7 @@ Ticktu is a multi-tenant B2B SaaS platform where each tenant (producer) gets an 
 **Technical Risks:**
 | Risk | Mitigation |
 |------|------------|
-| Offline validation sync conflicts | Design conflict resolution in architecture |
+| ~~Offline validation sync conflicts~~ | ~~Design conflict resolution in architecture~~ _(Descoped to online-first 2026-03-19 — no offline scanning, no sync conflicts)_ |
 | Payment failures during high traffic | MercadoPago handles scaling; implement retry logic |
 | Email deliverability | Use reputable ESP with proper SPF/DKIM/DMARC |
 | Multi-tenant data leakage | Tenant ID validation on every query; security testing |

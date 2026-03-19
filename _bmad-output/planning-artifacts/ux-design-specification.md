@@ -68,10 +68,10 @@ Ticktu has two critical experience surfaces with a clear priority hierarchy:
 | Buyer purchase flow | Mobile web (responsive) | Touch | Performance, deep link support, no app install |
 | Producer dashboard | Web (desktop-first, responsive) | Mouse/keyboard | Data-dense layouts, real-time updates |
 | Producer event-night monitoring | Mobile web (responsive) | Touch | Quick glances at live data |
-| Validation app | Mobile web / PWA | Touch + camera | Offline capability, low-light environments |
+| Validation app | Mobile web / PWA | Touch + camera | Online-first with connection status indicator, low-light environments _(offline capability descoped 2026-03-19)_ |
 | Ticktu admin panel | Web (desktop) | Mouse/keyboard | Multi-tenant management |
 
-No native apps for MVP. All surfaces are web-based, leveraging PWA capabilities where offline support is needed (validation app).
+No native apps for MVP. All surfaces are web-based, leveraging PWA capabilities for the validation app (online-first with connection status indicator — ~~offline support~~ descoped 2026-03-19).
 
 ### Effortless Interactions
 
@@ -91,10 +91,10 @@ No native apps for MVP. All surfaces are web-based, leveraging PWA capabilities 
 - Settlement reports that answer "how did I do?" immediately
 - The platform should feel fast and responsive — every click has immediate feedback
 
-**Door Operator — Invisible technology:**
+**Door Operator — Reliable technology:** _(Updated to online-first 2026-03-19)_
 - Point camera → get answer. Nothing else needed
-- Offline mode activates silently — no warnings, no interruptions
-- Sync happens automatically when connectivity returns
+- When connection drops, a "Sin conexión" banner informs the operator scanning is paused
+- When connection returns, banner disappears and scanning resumes automatically
 
 ### Critical Success Moments
 
@@ -104,7 +104,7 @@ No native apps for MVP. All surfaces are web-based, leveraging PWA capabilities 
 
 3. **Producer: "I can finally see everything"** — During a live event, the real-time dashboard shows check-in velocity, RRPP performance, revenue by ticket type, peak entry times — data they never had access to before, presented beautifully.
 
-4. **Door Operator: "It just works"** — 400 scans in a night, zero failures, zero confusion. Technology disappeared behind the task.
+4. **Door Operator: "It just works"** — 400 scans in a night, zero failures, zero confusion. Clear connection status when wifi drops. Technology disappeared behind the task.
 
 ### Experience Principles
 
@@ -150,7 +150,7 @@ No native apps for MVP. All surfaces are web-based, leveraging PWA capabilities 
 - **Setup:** Quick confidence — "I understand this immediately"
 - **Scanning:** Mechanical certainty — no decisions, just clear answers
 - **Peak traffic:** Calm under pressure — the tool keeps up, no bottlenecks
-- **Offline moment:** Unaware — seamless transition, no panic
+- **Connection loss:** Informed, not panicked — clear "Sin conexión" banner, knows to wait for connection _(updated from "unaware" to "informed" — online-first 2026-03-19)_
 
 ### Micro-Emotions
 
@@ -177,7 +177,7 @@ No native apps for MVP. All surfaces are web-based, leveraging PWA capabilities 
 | **Empowerment (Producer)** | Rich but readable charts, clear KPI cards, data always fresh, export capabilities visible |
 | **Premium feel (Both)** | Smooth animations (300ms ease curves), polished transitions, consistent micro-interactions, generous whitespace |
 | **Certainty (Door Operator)** | Full-screen color feedback (green/red), large text, haptic vibration on scan, no secondary information during scan |
-| **Calm under pressure (Door Operator)** | Offline indicator subtle (small dot, not a banner), scan history scrollable but not prominent, no alerts that block scanning |
+| **Calm under pressure (Door Operator)** | Clear "Sin conexión" banner when offline (operator knows scanning is paused), scan history scrollable but not prominent _(updated from subtle dot to explicit banner — online-first 2026-03-19)_ |
 
 ### Emotional Design Principles
 
@@ -294,7 +294,7 @@ A well-configured shadcn interface with good spacing, typography, and subtle mot
 | QR camera scanning | `html5-qrcode` or `zxing` | Device camera API access |
 | Real-time data | WebSockets / SSE | Data transport layer — shadcn renders the result |
 | White-label theming | CSS variables per tenant | shadcn natively supports CSS variable theming |
-| Offline PWA | Service workers + IndexedDB | Infrastructure layer, invisible to UI |
+| PWA shell | Service workers (Serwist) | PWA install + shell only — ~~offline scanning via IndexedDB~~ descoped 2026-03-19 |
 | Payment processing | MercadoPago JS SDK | External SDK handles payment UI |
 | Email templates | `react-email` or similar | Server-side rendering, different context |
 
@@ -410,7 +410,7 @@ The producer's defining experience is the moment they open their dashboard and s
 - Familiar with scanning apps from other ticketing platforms
 - Expects: point camera → see result → next person
 - Ticktu matches this exactly — no new mental model needed
-- Key improvement: offline capability they don't even notice
+- Connection awareness: clear "Sin conexión" banner if wifi drops — operator knows to wait _(updated from "invisible offline" to "informed online-first" 2026-03-19)_
 
 ### Success Criteria
 
@@ -703,7 +703,7 @@ Scrollable list: scanned count / total, recent scans with timestamp, ticket ID, 
 #### Technical Constraints
 
 - **10+ simultaneous devices** scanning for the same event. Duplicate detection must be centralized with low latency (Winston, party mode).
-- **Connectivity required as primary mode.** Offline as emergency fallback only (MVP decision from party mode). Offline sync and duplicate conflict resolution to be designed in architecture phase.
+- **Online-first validation.** _(Descoped from offline fallback 2026-03-19)_ Connectivity required to scan. When offline, a "Sin conexión" banner is displayed and scanning is paused. No offline scanning, no IndexedDB cache, no sync queue.
 - **Producer sees check-ins in near-real-time** from the dashboard (30s refresh cycle).
 
 ### Ticktu Admin Panel
@@ -740,7 +740,7 @@ Internal tool for Ticktu team only. **Functional and secure, no design priority.
 3. **Accreditors access with simple code** — no account creation, producer distributes codes
 4. **Balance visible at two levels** — general (Dashboard + Finanzas) and per-event (event detail Finanzas tab)
 5. **30-second polling refresh** for dashboard data (MVP) — avoids WebSocket complexity while maintaining near-real-time feel
-6. **Offline as fallback, not primary mode** — validation app requires connectivity, offline activates silently when connection drops
+6. **Online-first validation** — validation app requires connectivity to scan; "Sin conexión" banner shown when offline, scanning resumes automatically on reconnect _(descoped from offline fallback 2026-03-19)_
 7. **Admin Panel prioritizes security over aesthetics** — internal tool, must not break producer/buyer experience
 
 ### Notes for Other Agents
@@ -754,7 +754,7 @@ Internal tool for Ticktu team only. **Functional and secure, no design priority.
 **For Architect (Winston):**
 - Define security model for Admin Panel (isolation from producer/buyer)
 - Design access code system for Validation App (per-event codes, multi-device)
-- Offline/sync strategy for Validation App (fallback mode, duplicate conflict resolution with 10+ devices)
+- Online-first validation for Validation App — connection status indicator ("Sin conexión" banner) when offline, scanning paused _(offline/sync strategy descoped 2026-03-19)_
 - Role-based permissions: admin vs. boletería staff vs. accreditor
 - Boletería as backend variant of purchase flow (cash/transfer instead of MercadoPago)
 - 30-second polling for dashboard data refresh (confirmed MVP approach)
@@ -888,10 +888,10 @@ shadcn/ui covers approximately 90% of Ticktu's component needs. All standard UI 
 
 | Situation | Buyer | Dashboard | Validation App |
 |-----------|-------|-----------|---------------|
-| Momentary network loss | Silent retry, if fails → inline error with "Try again" | Warning toast "Intermittent connection" | **Nothing visible** — offline mode activates silently, keeps scanning |
+| Momentary network loss | Silent retry, if fails → inline error with "Try again" | Warning toast "Intermittent connection" | **"Sin conexión" banner** — scanning paused until connection returns _(updated to online-first 2026-03-19; was "nothing visible, offline mode silently")_ |
 | Payment failure | Clear inline error + cart preserved + "Try another payment method" | N/A | N/A |
 | Dashboard operation fails | N/A | Error toast + retry link | N/A |
-| Pending sync (offline) | N/A | N/A | Subtle indicator (small yellow dot), does not block anything |
+| Offline state | N/A | N/A | "Sin conexión" banner — scanning paused, operator informed to wait for connection _(updated to online-first 2026-03-19; was "subtle yellow dot, does not block")_ |
 
 ### Button Hierarchy
 
@@ -1082,7 +1082,7 @@ Never a blank page. Never a spinner without context. The buyer always knows what
 
 **Validation app:**
 - No navigation. Single-screen: camera + results
-- Minimal header: Ticktu logo + event name + online/offline indicator (subtle dot)
+- Minimal header: Ticktu logo + event name + "Sin conexión" banner when offline _(updated from subtle dot indicator — online-first 2026-03-19)_
 
 **Admin panel:**
 - Same as dashboard (sidebar + breadcrumb)

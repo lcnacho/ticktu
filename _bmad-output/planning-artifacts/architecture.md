@@ -26,10 +26,10 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 39 FRs across 8 domains: Tenant Management (4), Event Lifecycle (6), Ticketing & Pricing (5), Purchase & Payment (8 — FR-PU-08 removed, gap preserved), Attribution & RRPP (3), Analytics & Reporting (4), Validation & Offline (6), Admin & Support (3). The system covers the complete event lifecycle from producer onboarding to post-event settlement.
 
 **Non-Functional Requirements:**
-20 NFRs across Performance (4), Availability (3), Scalability (3), Security (4), Data Integrity (4), Email Deliverability (2). The most architecturally demanding are: multi-tenant isolation at every layer, offline validation with 100% sync integrity, 99.9% uptime during sales windows, and 500 concurrent buyers capacity.
+20 NFRs across Performance (4), Availability (3), Scalability (3), Security (4), Data Integrity (4), Email Deliverability (2). The most architecturally demanding are: multi-tenant isolation at every layer, online-first validation with connection status indicator _(descoped from offline validation 2026-03-19)_, 99.9% uptime during sales windows, and 500 concurrent buyers capacity.
 
 **UX Architectural Implications:**
-4 distinct UI surfaces (buyer purchase flow, producer dashboard, validation PWA, admin panel). Design system: shadcn/ui + Tailwind CSS with two-layer theming (Ticktu base + producer brand via CSS variables). 30-second polling for real-time dashboard updates (MVP). PWA with camera access for QR scanning. Offline capability via Service Workers + IndexedDB.
+4 distinct UI surfaces (buyer purchase flow, producer dashboard, validation PWA, admin panel). Design system: shadcn/ui + Tailwind CSS with two-layer theming (Ticktu base + producer brand via CSS variables). 30-second polling for real-time dashboard updates (MVP). PWA with camera access for QR scanning. Online-first validation with connection status indicator ("Sin conexión" banner). _(Descoped from offline capability via Service Workers + IndexedDB, 2026-03-19)_
 
 **Scale & Complexity:**
 
@@ -45,7 +45,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 - **Managed service model** — no self-service producer onboarding for MVP
 - **shadcn/ui + Tailwind CSS** confirmed as design system (from UX spec)
 - **30-second polling** for real-time dashboard (MVP decision, avoids WebSocket complexity)
-- **PWA** for validation app (offline capability via Service Workers + IndexedDB)
+- **PWA** for validation app (online-first with connection status indicator — ~~offline capability via Service Workers + IndexedDB~~ descoped 2026-03-19)
 
 ### Cross-Cutting Concerns Identified
 
@@ -57,17 +57,13 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 4. **Email Delivery Pipeline** — Not just a vendor decision but an architectural component: async job queue triggered on payment success → QR code generation → email template rendering → transactional email delivery. Must deliver within 60 seconds of payment (FR-PU-06). Critical path for buyer experience.
 
-5. **Offline Validation & Sync Strategy** — Connectivity required as primary mode, offline as emergency fallback (not offline-first). Architecture:
-   - **Cache trigger:** Automatic on event code entry — operator does nothing manually
-   - **Cache content:** Lightweight ticket manifest (qrHash, status, ticketType, holderName) in IndexedDB
-   - **Cache refresh:** Every 30 seconds while online to capture last-minute purchases
-   - **Offline detection:** Automatic, silent to operator (small yellow dot indicator)
-   - **Offline validation:** Against local IndexedDB cache
-   - **Sync on reconnect:** Queue-based, first-scan-wins business rule (not last-write-wins)
-   - **Known limitation:** Tickets purchased during offline window won't validate until reconnect — acceptable trade-off for fallback mode
-   - **Conflict resolution:** First device to sync a scan wins; second device's scan flagged on sync
-   - **Dual-device offline scenario:** Two operators offline scan the same ticket → both see "valid" locally (no way to prevent without connectivity). On reconnect, first device to sync wins; second device's scan is marked as `conflict` with reason `duplicate_offline_scan`. The operator sees an info message explaining the duplicate was already admitted. This is an **accepted limitation** of offline fallback mode — documented for event producers.
-   - **Testability concern:** Sync and conflict logic must be in pure functions testable independently of Service Worker/browser context
+5. **Online-First Validation & Connection Status** _(Descoped from offline validation 2026-03-19)_ — Connectivity required for all scanning. No offline scanning, no IndexedDB manifest cache, no background sync. Architecture:
+   - **Primary mode:** All scans validated online via POST to `/api/validation/scan`
+   - **Connection monitoring:** `navigator.onLine` + health-check pings detect connectivity state
+   - **Offline UX:** "Sin conexión" banner displayed when offline — scanner disabled, operator informed they cannot scan
+   - **Reconnect:** Banner disappears automatically, operator resumes scanning — no sync needed
+   - **No offline scanning:** If connection is lost, scanning is paused until it returns. This is the accepted trade-off for MVP simplicity
+   - **Full offline capability** (IndexedDB cache, offline scanning, first-scan-wins sync, conflict resolution) is a potential future enhancement
 
 6. **Real-Time Data** — Dashboard polling every 30s, in-place updates without flicker, live sales and check-in monitoring
 
@@ -81,16 +77,16 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 - Postgres RLS recommended as defense-in-depth for tenant isolation
 - Next.js API Routes + Server Actions as unified backend — one codebase, one deployment
 - Order creation as abstracted service function parameterized by payment method (MercadoPago / cash / transfer)
-- Offline validation: invisible infrastructure, no manual downloads, automatic cache on event code entry
+- Online-first validation: connection status indicator ("Sin conexión" banner), no offline scanning _(descoped from offline fallback 2026-03-19)_
 - Email pipeline as async architectural component (job queue), not just vendor selection
 - Multi-tenant isolation is #1 test priority — integration tests for cross-tenant access denial from day one
-- Offline sync logic must be in pure testable functions, not buried in Service Worker code
+- ~~Offline sync logic must be in pure testable functions~~ _(descoped 2026-03-19 — no offline sync needed for online-first)_
 
 ## Starter Template Evaluation
 
 ### Primary Technology Domain
 
-Full-stack web application based on project requirements: multi-tenant SaaS with 4 UI surfaces, payment integration, offline PWA capability, and real-time dashboard.
+Full-stack web application based on project requirements: multi-tenant SaaS with 4 UI surfaces, payment integration, PWA for validation (online-first), and real-time dashboard.
 
 ### Technical Preferences (Confirmed)
 
@@ -153,9 +149,9 @@ npm install inngest
 - Supabase Storage — event images, producer logos, brand assets
 - CDN-served via Supabase's built-in CDN
 
-**PWA & Offline:**
-- Serwist (@serwist/next) — Turbopack-compatible service workers
-- IndexedDB for offline ticket manifest cache in validation app
+**PWA & Online-First Validation:** _(Descoped from offline capability 2026-03-19)_
+- Serwist (@serwist/next) — Turbopack-compatible service workers (used for PWA shell, not offline validation)
+- ~~IndexedDB for offline ticket manifest cache in validation app~~ — descoped; no offline scanning
 
 **Forms & Validation:**
 - react-hook-form + zod — typed validation schemas, consistent across all surfaces
@@ -289,7 +285,7 @@ Subdomains like `producer.localhost` don't resolve by default. Options:
 | **Server Actions** | All mutations from our own UI | Create event, publish event, process POS sale, update settings, generate RRPP link |
 | **Route Handlers** (`app/api/`) | External webhooks, validation API, public endpoints | MercadoPago IPN webhook, validation scan endpoint, ticket availability endpoint |
 
-Validation app scan endpoint is a Route Handler (not Server Action) because offline PWA queues requests and replays them — requires a standard HTTP endpoint.
+Validation app scan endpoint is a Route Handler (not Server Action) because the PWA client sends HTTP requests directly — requires a standard HTTP endpoint.
 
 **Error Handling Standard:**
 
@@ -392,7 +388,7 @@ src/
     email/                # Resend + react-email templates
     inngest/              # Inngest client + job functions
     qr/                   # QR generation + validation logic
-    validation/           # Offline sync logic (pure functions)
+    validation/           # Connection status detection logic (online-first — offline sync descoped 2026-03-19)
     errors/               # AppError types + handleError()
   types/                  # Shared TypeScript types
 ```
@@ -436,7 +432,7 @@ Inngest dashboard is critical for monitoring email delivery during live events �
 7. Purchase flow (buyer checkout + MercadoPago integration)
 8. Email pipeline (Resend + react-email + QR generation)
 9. Dashboard (KPIs + charts + polling refresh)
-10. Validation app (PWA + QR scanning + offline cache)
+10. Validation app (PWA + QR scanning + online-first with connection status)
 11. Admin panel (producer management + support tools)
 
 **Cross-Component Dependencies:**
@@ -453,7 +449,7 @@ Inngest dashboard is critical for monitoring email delivery during live events �
 ### Naming Patterns
 
 **Database Naming (snake_case everywhere):**
-- Tables: plural, snake_case → `events`, `ticket_types`, `rrpp_links`, `offline_scans`
+- Tables: plural, snake_case → `events`, `ticket_types`, `rrpp_links`, `scans`
 - Columns: snake_case → `tenant_id`, `created_at`, `ticket_type_id`, `max_capacity`
 - Foreign keys: `{referenced_table_singular}_id` → `event_id`, `tenant_id`
 - Indexes: `idx_{table}_{columns}` → `idx_events_tenant_id`
@@ -515,7 +511,7 @@ lib/actions/
   events.ts          // publishEvent, createEvent, updateEvent
   orders.ts          // createOrder, processRefund
   tenants.ts         // updateBranding, configureProducer
-  validation.ts      // scanTicket, syncOfflineScans
+  validation.ts      // scanTicket (online-first — syncOfflineScans descoped 2026-03-19)
 ```
 
 **Drizzle Queries — Repository Pattern:**
@@ -685,13 +681,15 @@ Client → handleError() maps to UX feedback level:
 - Components: `src/components/dashboard/analytics/`
 - DB Queries: `src/lib/db/queries/analytics.ts`
 
-**FR Category: Validation & Offline (FR-VA-01 to FR-VA-06)**
+**FR Category: Validation & Online-First Scanning (FR-VA-01 to FR-VA-06)** _(Descoped from offline 2026-03-19)_
 - Routes: `src/app/(validation)/`
-- API: `src/app/api/validation/scan/route.ts`, `src/app/api/validation/manifest/route.ts`
+- API: `src/app/api/validation/scan/route.ts`
 - Components: `src/components/validation/`
-- Offline Logic: `src/lib/validation/sync.ts`, `src/lib/validation/cache.ts`, `src/lib/validation/conflict-resolver.ts`
-- Service Worker: `src/sw.ts` (Serwist entry — includes runtime caching rules for validation manifest)
+- Connection Status: `src/lib/validation/connection-status.ts` (online/offline detection logic)
+- Service Worker: `src/sw.ts` (Serwist entry — PWA shell only, no offline validation caching)
 - DB Schema: `src/lib/db/schema/scans.ts`
+- ~~Offline Logic: `src/lib/validation/sync.ts`, `src/lib/validation/cache.ts`, `src/lib/validation/conflict-resolver.ts`~~ — descoped
+- ~~API: `src/app/api/validation/manifest/route.ts`~~ — descoped
 
 **FR Category: Admin & Support (FR-AD-01 to FR-AD-03)**
 - Routes: `src/app/(admin)/`
@@ -820,7 +818,7 @@ ticktu/
     │   │       └── page.tsx           # Admin login (separate auth boundary)
     │   │
     │   ├── (validation)/               # Validation PWA routes
-    │   │   ├── layout.tsx              # Validation layout (minimal, offline-ready)
+    │   │   ├── layout.tsx              # Validation layout (minimal, online-first)
     │   │   ├── page.tsx               # Event code entry + operator name
     │   │   ├── scan/
     │   │   │   └── page.tsx           # QR scanner view (camera + result display)
@@ -832,10 +830,8 @@ ticktu/
     │       │   └── mercadopago/
     │       │       └── route.ts       # MercadoPago IPN webhook
     │       ├── validation/
-    │       │   ├── scan/
-    │       │   │   └── route.ts       # POST: submit scan result (PWA replay target)
-    │       │   └── manifest/
-    │       │       └── route.ts       # GET: ticket manifest for offline cache
+    │       │   └── scan/
+    │       │       └── route.ts       # POST: submit scan result (online validation)
     │       ├── inngest/
     │       │   └── route.ts           # Inngest serve endpoint (registers all job functions)
     │       └── tickets/
@@ -871,7 +867,7 @@ ticktu/
     │   │   ├── qr-scanner.test.tsx
     │   │   ├── scan-result.tsx         # Full-screen color feedback (Level 4)
     │   │   ├── event-code-form.tsx
-    │   │   ├── sync-indicator.tsx      # Online/offline status dot
+    │   │   ├── connection-banner.tsx    # "Sin conexión" banner (online-first — was sync-indicator.tsx, descoped 2026-03-19)
     │   │   └── scan-history.tsx
     │   ├── admin/
     │   │   ├── tenant-form.tsx
@@ -928,7 +924,7 @@ ticktu/
     │   │   ├── tenants.test.ts
     │   │   ├── rrpp.ts                # generateRRPPLink
     │   │   ├── rrpp.test.ts
-    │   │   ├── validation.ts          # syncOfflineScans
+    │   │   ├── validation.ts          # scanTicket (online-first)
     │   │   ├── validation.test.ts
     │   │   ├── admin.ts               # reissueTicket, lookupOrder
     │   │   └── admin.test.ts
@@ -953,12 +949,9 @@ ticktu/
     │   │   ├── generate.test.ts
     │   │   └── validate.ts            # QR hash verification logic
     │   ├── validation/
-    │   │   ├── sync.ts                # Offline sync logic (pure functions)
-    │   │   ├── sync.test.ts
-    │   │   ├── cache.ts               # IndexedDB manifest cache operations
-    │   │   ├── cache.test.ts
-    │   │   ├── conflict-resolver.ts   # First-scan-wins resolution (pure function)
-    │   │   └── conflict-resolver.test.ts
+    │   │   ├── connection-status.ts   # Online/offline detection logic
+    │   │   └── connection-status.test.ts
+    │   │   # ~~sync.ts, cache.ts, conflict-resolver.ts~~ — descoped (online-first 2026-03-19)
     │   ├── errors/
     │   │   ├── app-error.ts           # AppError type definition
     │   │   ├── handle-error.ts        # Error → UX feedback level mapper
@@ -978,8 +971,8 @@ ticktu/
     │
     ├── proxy.ts                        # Proxy (Node.js runtime): subdomain → surface routing + auth
     │
-    └── sw.ts                          # Serwist service worker entry (validation PWA)
-                                       # Includes runtime caching rules for /api/validation/manifest
+    └── sw.ts                          # Serwist service worker entry (validation PWA shell)
+                                       # PWA shell only — offline validation caching descoped 2026-03-19
 ```
 
 ### Architectural Boundaries
@@ -1034,7 +1027,7 @@ Buyer Purchase:
 Validation Scan:
   QR Scanner → POST /api/validation/scan → verify QR hash → check status
   → record scan → return result
-  (offline: scan → IndexedDB queue → reconnect → replay to /api/validation/scan)
+  (offline: "Sin conexión" banner displayed — scanning paused until connection returns. Descoped from offline queue 2026-03-19)
 
 Dashboard Refresh:
   Client component → setInterval(30s) → fetch analytics queries → in-place update
@@ -1046,7 +1039,7 @@ Dashboard Refresh:
 - `next.config.ts` — Next.js config (Serwist plugin, image domains, rewrites, `cacheComponents: true`)
 - `tailwind.config.ts` — Tailwind theme extension + CSS variable references
 - `drizzle.config.ts` — Drizzle Kit connection + migration output path
-- `serwist.config.ts` — PWA manifest, precache config
+- `serwist.config.ts` — PWA manifest, precache config (PWA shell only — offline validation descoped 2026-03-19)
 - `vitest.config.ts` — Test runner config (path aliases, setup files)
 - `playwright.config.ts` — E2E config (base URL, browser targets)
 
@@ -1100,7 +1093,7 @@ npm run lint && npm run typecheck && npm run test
 - Added `e2e/tenant-isolation.spec.ts` as dedicated cross-tenant E2E test (#1 priority)
 - Expanded `e2e/fixtures/` to `seed.ts`, `producers.ts`, `events.ts`, `tickets.ts` for multi-tenant test data
 - Annotated `api/tickets/availability/` as buyer-internal to prevent public API confusion
-- Clarified `sw.ts` includes runtime caching rules for validation manifest endpoint
+- `sw.ts` serves as PWA shell entry — ~~runtime caching for validation manifest~~ descoped (online-first 2026-03-19)
 - No custom tooling/skills needed — CI pipeline (`lint + typecheck + vitest`) enforces all checks at merge time
 
 ## Architecture Validation Results
@@ -1140,7 +1133,7 @@ npm run lint && npm run typecheck && npm run test
 | Purchase & Payment | FR-PU-01 to 09 | `(buyer)/checkout/` + MercadoPago adapter + webhook + Inngest email pipeline |
 | Attribution & RRPP | FR-RR-01 to 03 | `rrpp-links` schema + dashboard analytics queries |
 | Analytics & Reporting | FR-AN-01 to 04 | Dashboard polling + analytics queries + settlement page |
-| Validation & Offline | FR-VA-01 to 06 | PWA routes + Serwist + IndexedDB + sync pure functions + scan audit |
+| Validation & Online-First | FR-VA-01 to 06 | PWA routes + Serwist (shell only) + online validation + connection status indicator + scan audit _(offline IndexedDB + sync descoped 2026-03-19)_ |
 | Admin & Support | FR-AD-01 to 03 | `(admin)/` routes + cross-tenant search + ticket reissuance |
 
 **Non-Functional Requirements — All 20 NFRs Addressed:**
@@ -1148,10 +1141,10 @@ npm run lint && npm run typecheck && npm run test
 | NFR Category | Key NFRs | Architectural Support |
 |-------------|----------|----------------------|
 | Performance | PE-01 to 04 | Cache Components edge caching (<3s mobile), QR scan pure functions (<2s), Inngest email (<60s), Vercel functions (<500ms p95) |
-| Availability | AV-01 to 03 | Vercel multi-region + Cloudflare CDN (99.9%), payment fault isolation (Inngest retries), offline IndexedDB cache |
-| Scalability | SC-01 to 03 | Vercel auto-scaling (500 concurrent), PWA local processing (40 scans/min), stateless architecture |
+| Availability | AV-01 to 03 | Vercel multi-region + Cloudflare CDN (99.9%), payment fault isolation (Inngest retries), online-first validation with connection status indicator _(offline IndexedDB cache descoped 2026-03-19)_ |
+| Scalability | SC-01 to 03 | Vercel auto-scaling (500 concurrent), online validation (40 scans/min per device), stateless architecture |
 | Security | SE-01 to 04 | MercadoPago PCI delegation, RLS + app-level tenant isolation, crypto QR generation, separate auth boundaries |
-| Data Integrity | DI-01 to 04 | First-scan-wins sync + queue replay, conflict resolver pure function, webhook idempotency, Inngest guaranteed delivery |
+| Data Integrity | DI-01 to 04 | Online-first centralized duplicate detection _(first-scan-wins offline sync descoped 2026-03-19)_, webhook idempotency, Inngest guaranteed delivery |
 | Email Deliverability | EM-01 to 02 | Resend (SPF/DKIM/DMARC support), react-email branded templates |
 
 ### Implementation Readiness Validation

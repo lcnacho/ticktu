@@ -4,12 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { QRScanner } from "@/components/validation/qr-scanner";
 import { ScanResultOverlay } from "@/components/validation/scan-result-overlay";
-import {
-  getManifestEntry,
-  markAsUsedLocally,
-  addPendingScan,
-} from "@/lib/validation/cache";
-import { fetchAndCacheManifest, syncPendingScans } from "@/lib/validation/sync";
+import { ConnectionStatus } from "@/components/validation/connection-status";
 
 type ScanResult = {
   valid: boolean;
@@ -29,7 +24,6 @@ export default function ScanPage() {
   const router = useRouter();
   const [session, setSession] = useState<SessionData | null>(null);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
-  const [isOnline, setIsOnline] = useState(true);
   const [scanCount, setScanCount] = useState(0);
   const processingRef = useRef(false);
 
@@ -39,34 +33,7 @@ export default function ScanPage() {
       router.replace("/validacion");
       return;
     }
-    const data = JSON.parse(stored) as SessionData;
-    setSession(data);
-
-    fetchAndCacheManifest(data.eventId).catch(() => {});
-
-    // Refresh manifest every 30s while online to capture last-minute purchases
-    const refreshInterval = setInterval(() => {
-      if (navigator.onLine) {
-        fetchAndCacheManifest(data.eventId).catch(() => {});
-      }
-    }, 30000);
-
-    const handleOnline = () => {
-      setIsOnline(true);
-      syncPendingScans().catch(() => {});
-      fetchAndCacheManifest(data.eventId).catch(() => {});
-    };
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    setIsOnline(navigator.onLine);
-
-    return () => {
-      clearInterval(refreshInterval);
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
+    setSession(JSON.parse(stored) as SessionData);
   }, [router]);
 
   const handleScan = useCallback(
@@ -74,53 +41,46 @@ export default function ScanPage() {
       if (!session || processingRef.current) return;
       processingRef.current = true;
 
-      const qrHash = decodedText;
-      const entry = await getManifestEntry(qrHash);
-
-      let result: ScanResult;
-      let scanStatus: "valid" | "invalid" | "duplicate";
-
-      if (!entry) {
-        result = { valid: false, reason: "Entrada no encontrada" };
-        scanStatus = "invalid";
-      } else if (entry.status === "used") {
-        result = { valid: false, reason: "Ya utilizada", holderName: entry.holderName, ticketType: entry.ticketType };
-        scanStatus = "duplicate";
-      } else if (entry.status === "cancelled") {
-        result = { valid: false, reason: "Entrada cancelada" };
-        scanStatus = "invalid";
-      } else {
-        result = { valid: true, holderName: entry.holderName, ticketType: entry.ticketType };
-        scanStatus = "valid";
-        await markAsUsedLocally(qrHash);
+      if (!navigator.onLine) {
+        setScanResult({ valid: false, reason: "Sin conexion" });
+        return;
       }
 
-      setScanResult(result);
-      setScanCount((c) => c + 1);
+      try {
+        const res = await fetch("/api/validation/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            qrHash: decodedText,
+            operatorName: session.operatorName,
+            deviceId: session.deviceId,
+            scannedAt: new Date().toISOString(),
+            eventId: session.eventId,
+            tenantId: session.tenantId,
+          }),
+        });
 
-      const scanRecord = {
-        qrHash,
-        status: scanStatus,
-        operatorName: session.operatorName,
-        deviceId: session.deviceId,
-        scannedAt: new Date().toISOString(),
-        eventId: session.eventId,
-        tenantId: session.tenantId,
-      };
+        const data = await res.json();
 
-      if (navigator.onLine) {
-        try {
-          await fetch("/api/validation/scan", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(scanRecord),
+        if (res.ok && data.status === "valid") {
+          setScanResult({
+            valid: true,
+            holderName: data.holderName,
+            ticketType: data.ticketType,
           });
-        } catch {
-          await addPendingScan(scanRecord);
+        } else {
+          setScanResult({
+            valid: false,
+            reason: data.reason ?? "Entrada no valida",
+            holderName: data.holderName,
+            ticketType: data.ticketType,
+          });
         }
-      } else {
-        await addPendingScan(scanRecord);
+      } catch {
+        setScanResult({ valid: false, reason: "Error de conexion" });
       }
+
+      setScanCount((c) => c + 1);
     },
     [session],
   );
@@ -140,16 +100,9 @@ export default function ScanPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-black">
+      <ConnectionStatus />
       <div className="flex items-center justify-between bg-gray-900 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-white">{session.operatorName}</span>
-          {!isOnline && (
-            <>
-              <span className="size-2 rounded-full bg-yellow-400" title="Sin conexion" />
-              <span className="text-xs text-yellow-400">Sin conexión</span>
-            </>
-          )}
-        </div>
+        <span className="text-sm font-medium text-white">{session.operatorName}</span>
         <span className="text-sm text-gray-400">{scanCount} escaneos</span>
       </div>
 

@@ -70,7 +70,7 @@ So that all future development builds on a solid, multi-tenant foundation.
     - `src/app/(buyer)/layout.tsx` — buyer surface layout (will load producer theme)
     - `src/app/(dashboard)/layout.tsx` — producer dashboard layout
     - `src/app/(admin)/layout.tsx` — admin panel layout
-    - `src/app/(validation)/layout.tsx` — validation app layout (PWA)
+    - `src/app/(validation)/layout.tsx` — validation app layout (PWA, online-first)
   - [ ] 2.2 Create placeholder pages for each route group (`page.tsx` with minimal content)
   - [ ] 2.3 Create lib directory structure:
     - `src/lib/supabase/` (server.ts, client.ts, proxy.ts — stubs)
@@ -218,7 +218,7 @@ Request arrives → extract host header → parse subdomain
   ```
 - TypeScript: add `"@serwist/next/typings"` to `compilerOptions.types` and `"webworker"` to `compilerOptions.lib` in `tsconfig.json`
 - Service worker entry: `src/sw.ts`
-- For this story: configure plugin in `next.config.ts` only. Actual SW functionality (offline caching) deferred to Epic 7
+- For this story: configure plugin in `next.config.ts` only. Actual SW functionality (PWA shell) deferred to Epic 7 — offline caching descoped (online-first 2026-03-19)
 
 ### shadcn/ui CLI v4 Notes
 
@@ -257,7 +257,7 @@ src/
       layout.tsx                    # Admin layout
       page.tsx                      # Placeholder
     (validation)/
-      layout.tsx                    # Validation app layout (PWA)
+      layout.tsx                    # Validation app layout (PWA, online-first)
       page.tsx                      # Placeholder
     api/
       webhooks/mercadopago/route.ts # Stub
@@ -318,7 +318,7 @@ vitest.config.ts
 - Supabase Auth configuration (Story 1.3)
 - RLS policies (Story 1.2)
 - Producer branding/theming system (Story 1.4)
-- Actual service worker offline functionality (Epic 7)
+- Actual service worker functionality — PWA shell only, offline scanning descoped (Epic 7, online-first 2026-03-19)
 - Any UI components beyond placeholder layouts
 
 ## Dev Agent Record

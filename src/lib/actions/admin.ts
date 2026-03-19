@@ -1,15 +1,18 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/proxy";
 import { createAppError, type AppError } from "@/lib/errors/app-error";
 import { db } from "@/lib/db/index";
 import { orders } from "@/lib/db/schema/orders";
 import { tickets } from "@/lib/db/schema/tickets";
 import { ticketReissuances } from "@/lib/db/schema/ticket-reissuances";
+import { producers } from "@/lib/db/schema/producers";
 import { mercadopagoAdapter } from "@/lib/payments/mercadopago-client";
 import { generateQrPayload } from "@/lib/qr/generate";
 import { and, eq, ilike, or, sql } from "drizzle-orm";
 import { inngestClient } from "@/lib/inngest/client";
+import { getProducerBySlugExists } from "@/lib/db/queries/producers";
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -213,4 +216,105 @@ export async function reissueTicketAction(
   });
 
   return { success: true, data: { id: ticketId } };
+}
+
+export type CreateTenantInput = {
+  name: string;
+  slug: string;
+  adminEmail: string;
+  adminPassword: string;
+  logoUrl?: string;
+  primaryColor: string;
+  accentColor: string;
+  heroImageUrl?: string;
+  heroTagline?: string;
+  aboutText?: string;
+  socialLinks?: Record<string, string>;
+  config: {
+    heroVisible: boolean;
+    socialVisible: boolean;
+    aboutVisible: boolean;
+  };
+  currency: string;
+  feePercentage: number;
+  feeFixed: number;
+};
+
+export async function createTenantAction(
+  input: CreateTenantInput,
+): Promise<ActionResult<{ id: string; tenantId: string }>> {
+  const auth = await requireSuperAdmin();
+  if (auth.error) {
+    return { success: false, error: auth.error };
+  }
+
+  // Validate slug uniqueness
+  const slugExists = await getProducerBySlugExists(input.slug);
+  if (slugExists) {
+    return {
+      success: false,
+      error: createAppError(
+        "SLUG_TAKEN",
+        "Ya existe una productora con ese slug",
+        400,
+        "slug",
+      ),
+    };
+  }
+
+  // Create Supabase Auth user with service role client
+  const supabaseAdmin = createSupabaseServiceClient();
+  const { data: authData, error: authError } =
+    await supabaseAdmin.auth.admin.createUser({
+      email: input.adminEmail,
+      password: input.adminPassword,
+      email_confirm: true,
+      app_metadata: {
+        role: "producer_admin",
+      },
+    });
+
+  if (authError || !authData.user) {
+    return {
+      success: false,
+      error: createAppError(
+        "AUTH_ERROR",
+        authError?.message ?? "Error al crear usuario",
+        500,
+      ),
+    };
+  }
+
+  const tenantId = authData.user.id;
+
+  // Update app_metadata with tenant_id now that we have the user id
+  await supabaseAdmin.auth.admin.updateUserById(tenantId, {
+    app_metadata: {
+      role: "producer_admin",
+      tenant_id: tenantId,
+    },
+  });
+
+  // Create producer record
+  const [producer] = await db
+    .insert(producers)
+    .values({
+      tenantId,
+      slug: input.slug,
+      name: input.name,
+      logoUrl: input.logoUrl || null,
+      primaryColor: input.primaryColor,
+      accentColor: input.accentColor,
+      heroImageUrl: input.heroImageUrl || null,
+      heroTagline: input.heroTagline || null,
+      aboutText: input.aboutText || null,
+      socialLinks: input.socialLinks ?? {},
+      config: input.config,
+      currency: input.currency,
+      feePercentage: input.feePercentage,
+      feeFixed: input.feeFixed,
+    })
+    .returning();
+
+  return { success: true, data: { id: producer.id, tenantId } };
 }

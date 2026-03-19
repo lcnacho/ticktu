@@ -64,13 +64,13 @@ FR-AN-02: Post-event settlement report details total tickets sold, gross revenue
 FR-AN-03: Customer database stores buyer information (name, email) and purchase history per producer tenant
 FR-AN-04: Producers can view check-in data: attendance count, peak entry times, ticket type breakdown
 
-**Validation & Offline (6 FRs)**
+**Validation & Online-First Scanning (6 FRs)** _(Descoped to online-first 2026-03-19 — offline scanning, IndexedDB manifest cache, and background sync removed)_
 
 FR-VA-01: Validation app authenticates to a specific event via event code and operator name
 FR-VA-02: QR scan validates ticket and displays result (valid + ticket info, or invalid + reason) in under 2 seconds
 FR-VA-03: Duplicate QR scans are rejected with clear "Already Used" indication
-FR-VA-04: Validation app caches event ticket data and operates fully offline when internet is unavailable
-FR-VA-05: Offline validations sync automatically when connectivity is restored, maintaining 100% data integrity
+FR-VA-04: ~~Validation app caches event ticket data and operates fully offline when internet is unavailable~~ _(Descoped to online-first 2026-03-19)_ — Validation app displays a connection status indicator; when offline, a "Sin conexión" banner informs the operator they cannot scan
+FR-VA-05: ~~Offline validations sync automatically when connectivity is restored, maintaining 100% data integrity~~ _(Descoped to online-first 2026-03-19)_ — When connectivity returns, the operator can simply resume scanning; no sync queue needed
 FR-VA-06: Each scan is tracked with operator identity, timestamp, and device for audit purposes
 
 **Admin & Support (3 FRs)**
@@ -94,7 +94,7 @@ NFR-PE-04: API endpoints respond in under 500ms for 95th percentile under normal
 
 NFR-AV-01: Platform maintains 99.9%+ uptime during active ticket sales windows as measured by uptime monitoring
 NFR-AV-02: Payment processing failures do not cascade — if analytics or non-critical services fail, purchase flow continues operating
-NFR-AV-03: Validation app operates fully offline with cached event data; zero dependency on internet connectivity during event
+NFR-AV-03: ~~Validation app operates fully offline with cached event data~~ _(Descoped to online-first 2026-03-19)_ — Validation app requires internet connectivity; displays "Sin conexión" banner when offline
 
 **Scalability (3 NFRs)**
 
@@ -111,8 +111,8 @@ NFR-SE-04: Admin panel and producer panel are separate authentication boundaries
 
 **Data Integrity (4 NFRs)**
 
-NFR-DI-01: Offline validation syncs maintain 100% data integrity — no scans lost on reconnection as verified by reconciliation checks
-NFR-DI-02: Offline conflict resolution handles edge case of same ticket validated on two devices offline with clear resolution strategy
+NFR-DI-01: ~~Offline validation syncs maintain 100% data integrity~~ _(Descoped to online-first 2026-03-19)_ — All scans are online; no offline sync needed
+NFR-DI-02: ~~Offline conflict resolution handles edge case of same ticket validated on two devices offline~~ _(Descoped to online-first 2026-03-19)_ — With online-first, duplicate detection is centralized and real-time
 NFR-DI-03: Payment success rate of 99%+ as measured per event (failures are MercadoPago-side, not Ticktu-side)
 NFR-DI-04: Ticket delivery rate of 100% — every successful payment results in delivered tickets as measured per event
 
@@ -164,7 +164,7 @@ UX-DR-14: Loading states: Skeleton (shadcn) for initial page load matching conte
 UX-DR-15: Empty states with reusable `<EmptyState />` component — 3 variants: first-use (positive CTA), no-results (clear filters CTA), error (retry CTA)
 UX-DR-16: Modal/overlay patterns: Dialog (short forms, <5 fields), Sheet (longer content, slide from right desktop / bottom mobile), AlertDialog (destructive confirmations). One overlay at a time, Escape always closes
 UX-DR-17: Validation app — event code + operator name entry → camera scanner → full-screen color feedback (green valid / red invalid) with auto-dismiss 2s + device vibration. No buttons between scans, zero-button scanning interface
-UX-DR-18: Validation app offline indicator — subtle small yellow dot, does not block scanning. Offline mode activates silently, syncs automatically on reconnect
+UX-DR-18: Validation app connection status indicator — "Sin conexión" banner when offline, informing the operator they cannot scan until connection returns _(Updated to online-first 2026-03-19 — previously a subtle yellow dot for offline fallback mode)_
 UX-DR-19: Scan Result Overlay — full-screen color feedback (aligned with UX-DR-17 Level 4 Environmental feedback), VALID (green + checkmark) / INVALID (red + X + reason), auto-dismiss 2s, haptic feedback. Renders as full-screen overlay for unambiguous visibility in dark/loud venue environments
 UX-DR-20: Ticket Quantity Selector custom component — [-] [number] [+] built with shadcn Button + Input primitives, used in buyer checkout and Boletería
 UX-DR-21: QR Scanner View custom component — camera viewfinder, `html5-qrcode` or equivalent, states: loading camera / scanning / processing
@@ -208,8 +208,8 @@ FR-AN-04: Epic 6 — Check-in data with attendance and peak times
 FR-VA-01: Epic 7 — Validation app auth via event code and operator name
 FR-VA-02: Epic 7 — QR scan with result in under 2 seconds
 FR-VA-03: Epic 7 — Duplicate scan rejection
-FR-VA-04: Epic 7 — Offline operation with cached event data
-FR-VA-05: Epic 7 — Automatic sync on reconnect with 100% integrity
+FR-VA-04: Epic 7 — ~~Offline operation with cached event data~~ Online-first with connection status indicator _(Descoped to online-first 2026-03-19)_
+FR-VA-05: Epic 7 — ~~Automatic sync on reconnect with 100% integrity~~ Resume scanning when connection returns _(Descoped to online-first 2026-03-19)_
 FR-VA-06: Epic 7 — Scan tracking with operator, timestamp, device
 FR-AD-01: Epic 10 — Cross-tenant order lookup
 FR-AD-02: Epic 10 — Ticket reissuance (new QR, invalidate old)
@@ -252,10 +252,10 @@ Producers see live sales data, 5 KPI cards with trends (including Balance), RRPP
 **FRs covered:** FR-AN-01, FR-AN-03, FR-AN-04, FR-EV-06
 **Includes:** KPI cards, sales charts, RRPP ranking, check-in data, customer database (accessible from Ventas), 30s polling refresh with in-place CSS transitions
 
-### Epic 7: Ticket Validation & Offline Capability
-Door operators validate tickets via QR scanning PWA with full-screen color feedback, offline capability, automatic sync on reconnect, and complete audit trail.
+### Epic 7: Ticket Validation & Online-First Scanning _(Descoped from offline capability 2026-03-19)_
+Door operators validate tickets via QR scanning PWA with full-screen color feedback, online-first validation with connection status indicator, and complete audit trail.
 **FRs covered:** FR-VA-01, FR-VA-02, FR-VA-03, FR-VA-04, FR-VA-05, FR-VA-06
-**Includes:** PWA (Serwist), QR scanner (html5-qrcode), IndexedDB cache, offline sync (first-scan-wins), scan audit, Level 4 environmental feedback
+**Includes:** PWA (Serwist), QR scanner (html5-qrcode), connection status indicator ("Sin conexión" banner), scan audit, Level 4 environmental feedback. ~~IndexedDB cache, offline sync (first-scan-wins)~~ descoped.
 
 ### Epic 8: Post-Event Settlement & Event Cancellation
 Post-event settlement reports with full financial breakdown. Event cancellation triggers refund processing via MercadoPago and buyer notification emails.
@@ -1548,9 +1548,9 @@ So that I can understand my audience and leverage customer data for future event
 
 ---
 
-## Epic 7: Ticket Validation & Offline Capability
+## Epic 7: Ticket Validation & Online-First Scanning _(Descoped from offline capability 2026-03-19)_
 
-Door operators validate tickets via QR scanning PWA with full-screen color feedback, offline capability, automatic sync on reconnect, and complete audit trail.
+Door operators validate tickets via QR scanning PWA with full-screen color feedback, online-first validation with connection status indicator, and complete audit trail.
 
 ### Story 7.1: Validation App Entry & PWA Shell
 
@@ -1648,99 +1648,51 @@ So that I can process the entry line quickly and catch fraudulent or duplicate t
 
 ---
 
-### Story 7.3: Offline Cache & Offline Scanning
+### Story 7.3: Connection Status Indicator _(Descoped to online-first 2026-03-19 — was "Offline Cache & Offline Scanning")_
 
 As a **door operator**,
-I want the validation app to keep working when internet drops so I never stop scanning,
-So that spotty venue WiFi does not create a bottleneck at the door.
+I want to see a clear indicator when I lose internet so I know scanning is temporarily unavailable,
+So that I understand why scans are not working and can wait for the connection to return.
 
 **Acceptance Criteria:**
 
-**Given** the operator successfully authenticates with an event code (Story 7.1)
-**When** the event session is established
-**Then** the app automatically fetches the ticket manifest from `GET /api/validation/manifest?eventId={id}` and stores it in IndexedDB via `lib/validation/cache.ts` — the manifest contains lightweight records: `qrHash`, `status`, `ticketType`, `holderName` per ticket
-
-**Given** the manifest Route Handler at `/api/validation/manifest`
-**When** it receives a valid request with event session
-**Then** it returns all tickets for the event as a JSON array of `{ qrHash, status, ticketType, holderName }` records, scoped to the event's tenant
-
 **Given** the app is online and the scanner is active
-**When** 30 seconds elapse
-**Then** the manifest is silently re-fetched and IndexedDB is updated to capture last-minute ticket purchases and status changes
+**When** connectivity is monitored
+**Then** no connection status indicator is visible — the scanner operates normally via online validation (Story 7.2)
 
 **Given** the app loses internet connectivity
-**When** the offline state is detected
-**Then** a subtle small yellow dot appears in the header (UX-DR-18), scanning continues without interruption, and no blocking warnings or modals are shown
+**When** the offline state is detected (via `navigator.onLine` and/or failed fetch)
+**Then** a "Sin conexión" banner is displayed prominently in the scanner view, the QR scanner is disabled (camera may remain active but scans are not processed), and the operator understands they must wait for connection to return
 
-**Given** the app is offline and the operator scans a QR code
-**When** the QR hash is found in the IndexedDB cache with status `unused`
-**Then** the scan result popup shows valid (green, checkmark, holder name, ticket type), the local cache is updated to mark the ticket as used, and the scan is added to a local offline scan queue in IndexedDB
+**Given** the "Sin conexión" banner is displayed
+**When** internet connectivity is restored
+**Then** the banner disappears automatically, the scanner resumes normal online operation, and no manual action is required from the operator
 
-**Given** the app is offline and the operator scans a QR code already marked as used in the local cache
-**When** the validation runs against IndexedDB
-**Then** the scan result popup shows invalid with reason "Ya fue usado" (red, X icon), and the scan is recorded in the local queue with status `duplicate`
-
-**Given** the app is offline and the operator scans a QR code not found in the IndexedDB cache
-**When** the validation runs against IndexedDB
-**Then** the scan result popup shows invalid with reason "No encontrado" (red, X icon) — this is an accepted limitation for tickets purchased during the offline window
-
-**Given** the Serwist service worker (`sw.ts`)
-**When** reviewing runtime caching rules
-**Then** the `/api/validation/manifest` endpoint has a caching strategy configured so the last successful response is available for offline access
-
-**Given** the offline scan queue in IndexedDB
-**When** reviewing the queued scan records
-**Then** each record includes: qrHash, status, operatorName, deviceId, scannedAt (device timestamp), and is ordered by scan time for sequential replay
-
-**Given** the `lib/validation/cache.ts` module
+**Given** the connection status detection logic
 **When** reviewing the implementation
-**Then** all IndexedDB operations are wrapped in pure, testable functions that can be tested independently of browser/service worker context
+**Then** it uses a combination of `navigator.onLine` event listeners and periodic health-check pings to `/api/validation/scan` (or a lightweight health endpoint) to detect connectivity state reliably
+
+**Note (Descoped to online-first 2026-03-19):** The previous design included IndexedDB manifest cache, offline scanning against local cache, offline scan queue, and Serwist runtime caching for the manifest endpoint. These have been descoped. No IndexedDB, no offline scanning, no `/api/validation/manifest` endpoint needed. The only offline UX is the "Sin conexión" banner. Full offline capability may be reconsidered as a future enhancement.
 
 ---
 
-### Story 7.4: Automatic Sync on Reconnect
+### Story 7.4: Resume Scanning on Reconnect _(Descoped to online-first 2026-03-19 — was "Automatic Sync on Reconnect")_
 
 As a **door operator**,
-I want my offline scans to sync automatically when internet returns without losing any data,
-So that the producer's dashboard has the complete, accurate picture of who entered the event.
+I want to seamlessly resume scanning when internet returns after a disconnection,
+So that I can get back to processing the entry line as quickly as possible.
 
 **Acceptance Criteria:**
 
-**Given** the app was offline and has queued scans in IndexedDB
-**When** internet connectivity is restored
-**Then** the sync process starts automatically without operator intervention, the yellow offline dot disappears, and queued scans are replayed to `/api/validation/scan` in chronological order
+**Given** the app was showing the "Sin conexión" banner (Story 7.3)
+**When** internet connectivity is restored (detected via `navigator.onLine` event and/or successful health-check ping)
+**Then** the "Sin conexión" banner disappears automatically, the scanner resumes normal online validation mode (Story 7.2), and no manual action or page reload is required from the operator
 
-**Given** the sync process replays an offline scan to the server
-**When** the server confirms the scan is the first for that ticket (no prior scan exists)
-**Then** the scan is accepted with status `valid`, the `synced_at` timestamp is set on the record, and the local IndexedDB queue entry is marked as synced
+**Given** the app reconnects after a brief disconnection
+**When** the operator scans a QR code
+**Then** the scan is processed online via POST to `/api/validation/scan` exactly as in Story 7.2 — there is no pending queue, no sync process, no cached data to reconcile
 
-**Given** two operators were offline and both scanned the same ticket
-**When** the first operator's device reconnects and syncs
-**Then** the scan is accepted with status `valid` (first-scan-wins rule, NFR-DI-02)
-
-**Given** two operators were offline and both scanned the same ticket
-**When** the second operator's device reconnects and syncs
-**Then** the server returns `conflict` with reason `duplicate_offline_scan`, the local scan record is updated with the conflict status, and the operator sees an informational message explaining the ticket was already admitted by another device
-
-**Given** the sync process encounters a network error mid-sync
-**When** some scans have synced but others have not
-**Then** only the successfully synced scans are marked as synced, remaining scans stay in the queue, and sync retries automatically when connectivity is stable — zero scans are lost (NFR-DI-01)
-
-**Given** the `lib/validation/sync.ts` module
-**When** reviewing the implementation
-**Then** the sync queue replay logic is implemented as pure functions testable without browser or service worker context, and the Serwist service worker registers a Background Sync handler that invokes these functions
-
-**Given** the `lib/validation/conflict-resolver.ts` module
-**When** reviewing the conflict resolution logic
-**Then** it implements the first-scan-wins rule as a pure function: given a scan and the server response, it returns the resolved status and any conflict reason
-
-**Given** all offline scans have been synced
-**When** the producer checks the dashboard check-ins tab
-**Then** all scans (online and offline-synced) appear in the check-in data with accurate operator names, timestamps (device time from when the scan occurred, not sync time), and device identifiers — 100% data integrity (FR-VA-05)
-
-**Given** the test suite for sync and conflict resolution
-**When** the unit tests run
-**Then** they verify: (1) scans replay in chronological order, (2) first-scan-wins produces correct status, (3) conflict scans are flagged with reason, (4) partial sync failure preserves unsynced scans, (5) all synced records have accurate device timestamps
+**Note (Descoped to online-first 2026-03-19):** The previous design included an IndexedDB offline scan queue, Background Sync via Serwist service worker, first-scan-wins conflict resolution (`lib/validation/sync.ts`, `lib/validation/conflict-resolver.ts`), and queue replay logic. These have been descoped. No offline scans are recorded, so there is nothing to sync on reconnect. The operator simply resumes scanning. Full offline sync capability may be reconsidered as a future enhancement.
 
 ---
 

@@ -69,8 +69,8 @@ documents:
 | FR-VA-01 | Validation app authenticates to a specific event via event code and operator name |
 | FR-VA-02 | QR scan validates ticket and displays result in under 2 seconds |
 | FR-VA-03 | Duplicate QR scans are rejected with clear "Already Used" indication |
-| FR-VA-04 | Validation app caches event ticket data and operates fully offline |
-| FR-VA-05 | Offline validations sync automatically when connectivity restored, maintaining 100% data integrity |
+| FR-VA-04 | ~~Validation app caches event ticket data and operates fully offline~~ _(Descoped to online-first 2026-03-19)_ — Connection status indicator; "Sin conexión" banner when offline |
+| FR-VA-05 | ~~Offline validations sync automatically when connectivity restored~~ _(Descoped to online-first 2026-03-19)_ — Operator resumes scanning when connection returns; no sync needed |
 | FR-VA-06 | Each scan is tracked with operator identity, timestamp, and device for audit purposes |
 | FR-AD-01 | Ticktu admin can look up any order by buyer name, email, or transaction ID across all tenants |
 | FR-AD-02 | Ticktu admin can reissue tickets (generate new QR, invalidate old) for support cases |
@@ -90,7 +90,7 @@ documents:
 | NFR-PE-04 | API endpoints respond in under 500ms for 95th percentile under normal load |
 | NFR-AV-01 | Platform maintains 99.9%+ uptime during active ticket sales windows |
 | NFR-AV-02 | Payment processing failures do not cascade — purchase flow continues if non-critical services fail |
-| NFR-AV-03 | Validation app operates fully offline with cached event data |
+| NFR-AV-03 | ~~Validation app operates fully offline~~ _(Descoped to online-first 2026-03-19)_ — Requires internet; "Sin conexión" banner when offline |
 | NFR-SC-01 | Platform supports up to 500 concurrent buyers during sales window without degradation |
 | NFR-SC-02 | Validation app supports scanning rates of minimum 40 tickets/minute per device |
 | NFR-SC-03 | Architecture supports horizontal scaling of application servers |
@@ -98,8 +98,8 @@ documents:
 | NFR-SE-02 | Tenant ID validated on every API request; no cross-tenant data access possible |
 | NFR-SE-03 | Each ticket QR code is cryptographically unique and non-guessable |
 | NFR-SE-04 | Admin panel and producer panel are separate authentication boundaries |
-| NFR-DI-01 | Offline validation syncs maintain 100% data integrity — no scans lost on reconnection |
-| NFR-DI-02 | Offline conflict resolution handles same ticket validated on two devices offline |
+| NFR-DI-01 | ~~Offline validation syncs maintain 100% data integrity~~ _(Descoped to online-first 2026-03-19)_ — All scans online; no sync needed |
+| NFR-DI-02 | ~~Offline conflict resolution handles same ticket validated on two devices offline~~ _(Descoped to online-first 2026-03-19)_ — Centralized online duplicate detection |
 | NFR-DI-03 | Payment success rate of 99%+ per event |
 | NFR-DI-04 | Ticket delivery rate of 100% — every successful payment results in delivered tickets |
 | NFR-EM-01 | Ticket delivery emails achieve 99%+ inbox placement rate |
@@ -216,7 +216,7 @@ documents:
 | 4 user personas (Producer, Buyer, Operator, RRPP) | ✅ Aligned | UX maps to all PRD user journeys |
 | Buyer purchase flow (FR-PU-01 to FR-PU-09) | ✅ Aligned | Mobile-first, guest checkout, deep linking all specified |
 | Producer dashboard (FR-EV-01 to FR-EV-06, FR-AN-01 to FR-AN-04) | ✅ Aligned | Event lifecycle, real-time dashboard, settlement covered |
-| Validation app (FR-VA-01 to FR-VA-06) | ✅ Aligned | PWA, offline, QR scanning, operator ID all specified |
+| Validation app (FR-VA-01 to FR-VA-06) | ✅ Aligned | PWA, online-first validation with connection status, QR scanning, operator ID all specified _(offline descoped 2026-03-19)_ |
 | Admin panel (FR-AD-01 to FR-AD-03) | ✅ Aligned | Separate auth boundary, cross-tenant search |
 | RRPP tracking (FR-RR-01 to FR-RR-03) | ✅ Aligned | URL-only interaction, no platform UI needed |
 
@@ -228,7 +228,7 @@ documents:
 | White-label theming (CSS variables) | ✅ Aligned | Two-layer theme system documented in both |
 | Forms (react-hook-form + zod) | ✅ Aligned | Consistent across UX and architecture |
 | Real-time dashboard (30s polling) | ✅ Aligned | Both docs specify same approach |
-| Offline validation (PWA + IndexedDB) | ✅ Aligned | Architecture supports UX offline requirements |
+| Online-first validation (PWA + connection status) | ✅ Aligned | Architecture supports UX online-first requirements _(offline PWA + IndexedDB descoped 2026-03-19)_ |
 | 4-level feedback model | ✅ Aligned | Architecture error handling maps to UX feedback levels |
 | Loading states (Skeleton components) | ✅ Aligned | Both specify shadcn Skeleton patterns |
 
@@ -251,7 +251,7 @@ documents:
 | Epic 4: Buyer Purchase Flow & Ticket Delivery | ✅ Yes | ✅ Yes (needs Epic 3) | End-to-end purchase flow. Revenue-generating. |
 | Epic 5: RRPP Attribution & Promoter Tracking | ✅ Yes | ✅ Yes (needs Epic 4) | Sales attribution for promoters. |
 | Epic 6: Real-Time Dashboard & Analytics | ✅ Yes | ✅ Yes (needs Epic 4) | Live data, KPIs, check-in monitoring. |
-| Epic 7: Ticket Validation & Offline | ✅ Yes | ✅ Yes (needs Epic 4) | Door operators scan tickets. |
+| Epic 7: Ticket Validation & Online-First Scanning | ✅ Yes | ✅ Yes (needs Epic 4) | Door operators scan tickets. _(Descoped from offline 2026-03-19)_ |
 | Epic 8: Post-Event Settlement & Cancellation | ✅ Yes | ✅ Yes (needs Epic 4) | Financial reports, refund processing. |
 | Epic 9: Boletería & Financial Management | ✅ Yes | ✅ Yes (needs Epic 4) | POS sales, expense tracking, balance. |
 | Epic 10: Admin & Support Tools | ✅ Yes | ✅ Yes (needs Epic 4) | Cross-tenant order lookup, ticket reissuance. |

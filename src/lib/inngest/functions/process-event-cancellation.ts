@@ -2,8 +2,13 @@ import { inngestClient } from "@/lib/inngest/client";
 import { db } from "@/lib/db/index";
 import { orders } from "@/lib/db/schema/orders";
 import { tickets } from "@/lib/db/schema/tickets";
+import { events } from "@/lib/db/schema/events";
+import { producers } from "@/lib/db/schema/producers";
 import { eq, and } from "drizzle-orm";
 import { mercadopagoAdapter } from "@/lib/payments/mercadopago-client";
+import { Resend } from "resend";
+import { CancellationEmail } from "@/lib/email/cancellation-email";
+import { formatDateTime } from "@/lib/utils/dates";
 
 export const processEventCancellation = inngestClient.createFunction(
   { id: "process-event-cancellation", retries: 3 },
@@ -77,10 +82,48 @@ export const processEventCancellation = inngestClient.createFunction(
         );
     });
 
-    // Step 4: Send cancellation emails
-    await step.run("send-cancellation-emails", async () => {
-      // TODO: Implement react-email cancellation template and Resend delivery
+    // Step 4: Fetch event + producer data for emails
+    const emailContext = await step.run("fetch-email-context", async () => {
+      const [event] = await db
+        .select()
+        .from(events)
+        .where(and(eq(events.tenantId, tenantId), eq(events.id, eventId)))
+        .limit(1);
+      const [producer] = await db
+        .select()
+        .from(producers)
+        .where(and(eq(producers.tenantId, tenantId), eq(producers.isActive, true)))
+        .limit(1);
+      return { event, producer };
     });
+
+    // Step 5: Send cancellation emails to each buyer
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    for (const order of paidOrders) {
+      await step.run(`send-cancellation-email-${order.id}`, async () => {
+        if (!emailContext.event || !emailContext.producer) return;
+
+        const { event, producer } = emailContext;
+
+        await resend.emails.send({
+          from: `${producer.name} <noreply@${process.env.RESEND_DOMAIN || "ticktu.com"}>`,
+          to: order.buyerEmail,
+          subject: `Evento cancelado: ${event.name}`,
+          react: CancellationEmail({
+            eventName: event.name,
+            eventDate: formatDateTime(event.date),
+            eventVenue: event.venue,
+            buyerName: order.buyerName,
+            producerName: producer.name,
+            producerLogoUrl: producer.logoUrl,
+            primaryColor: producer.primaryColor,
+            refundAmount: (order.totalAmount / 100).toFixed(2),
+            currency: order.currency,
+          }),
+        });
+      });
+    }
 
     return { refundedOrders: paidOrders.length };
   },

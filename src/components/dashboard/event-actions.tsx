@@ -9,6 +9,7 @@ import {
   publishEventAction,
   finishEventAction,
   archiveEventAction,
+  cancelEventAction,
 } from "@/lib/actions/events";
 
 const TRANSITION_CONFIG: Record<
@@ -52,14 +53,18 @@ type EventActionsProps = {
   currentStatus: EventStatus;
 };
 
+const canCancel = (status: EventStatus) =>
+  status === "published" || status === "finished";
+
 export function EventActions({ eventId, currentStatus }: EventActionsProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [confirmingTransition, setConfirmingTransition] = useState<string | null>(null);
 
   const validTransitions = getValidTransitions(currentStatus);
+  const showCancel = canCancel(currentStatus);
 
-  if (validTransitions.length === 0) return null;
+  if (validTransitions.length === 0 && !showCancel) return null;
 
   async function handleTransition(targetStatus: string) {
     const config = TRANSITION_CONFIG[targetStatus];
@@ -74,6 +79,20 @@ export function EventActions({ eventId, currentStatus }: EventActionsProps) {
       router.refresh();
     } else {
       toast.error(result.error?.message ?? "Error al cambiar el estado");
+    }
+    setConfirmingTransition(null);
+  }
+
+  async function handleCancel() {
+    setIsLoading(true);
+    const result = await cancelEventAction(eventId);
+    setIsLoading(false);
+
+    if (result.success) {
+      toast.success("Evento cancelado exitosamente");
+      router.refresh();
+    } else {
+      toast.error(result.error?.message ?? "Error al cancelar el evento");
     }
     setConfirmingTransition(null);
   }
@@ -125,6 +144,47 @@ export function EventActions({ eventId, currentStatus }: EventActionsProps) {
           </button>
         );
       })}
+
+      {showCancel && confirmingTransition === "cancelled" && (
+        <div
+          key="cancelled"
+          className="flex items-center gap-2 rounded-md border border-red-200 bg-white p-3 shadow-sm"
+        >
+          <div className="mr-2">
+            <p className="text-sm font-medium text-red-700">Cancelar evento</p>
+            <p className="text-xs text-gray-500">
+              Cancelar este evento procesara reembolsos a todos los compradores.
+              Esta accion no se puede deshacer.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={handleCancel}
+            className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            {isLoading ? "..." : "Confirmar"}
+          </button>
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={() => setConfirmingTransition(null)}
+            className="rounded-md border px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Volver
+          </button>
+        </div>
+      )}
+
+      {showCancel && confirmingTransition !== "cancelled" && (
+        <button
+          type="button"
+          onClick={() => setConfirmingTransition("cancelled")}
+          className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+        >
+          Cancelar Evento
+        </button>
+      )}
     </div>
   );
 }
