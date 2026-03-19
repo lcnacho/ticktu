@@ -4,8 +4,10 @@ import type { Metadata } from "next";
 import { cacheTag } from "next/cache";
 import { getProducerBySlug } from "@/lib/db/queries/producers";
 import { getPublishedEventBySlug } from "@/lib/db/queries/events";
+import { getActiveTicketTypesByEvent } from "@/lib/db/queries/ticket-types";
 import { ProducerHeader } from "@/components/buyer/producer-header";
 import { PoweredByFooter } from "@/components/buyer/powered-by-footer";
+import { TicketSelectorSection } from "@/components/buyer/ticket-selector-section";
 import { formatDateTime } from "@/lib/utils/dates";
 
 async function getEventPageData(producerSlug: string, eventSlug: string) {
@@ -17,9 +19,14 @@ async function getEventPageData(producerSlug: string, eventSlug: string) {
   const event = await getPublishedEventBySlug(producer.tenantId, eventSlug);
   if (!event) return null;
 
+  const ticketTypes = await getActiveTicketTypesByEvent(
+    producer.tenantId,
+    event.id,
+  );
+
   cacheTag(`tenant-${producerSlug}`, `event-${event.id}`);
 
-  return { producer, event };
+  return { producer, event, ticketTypes };
 }
 
 export async function generateMetadata({
@@ -49,23 +56,26 @@ export async function generateMetadata({
 
 async function PublicEventContent({
   paramsPromise,
+  searchParamsPromise,
 }: {
   paramsPromise: Promise<{ slug: string; eventSlug: string }>;
+  searchParamsPromise: Promise<{ ref?: string }>;
 }) {
   const { slug, eventSlug } = await paramsPromise;
+  const { ref: rrppRef } = await searchParamsPromise;
   const data = await getEventPageData(slug, eventSlug);
 
   if (!data) {
     notFound();
   }
 
-  const { producer, event } = data;
+  const { producer, event, ticketTypes } = data;
 
   return (
     <>
       <ProducerHeader name={producer.name} logoUrl={producer.logoUrl} />
 
-      <main className="px-4 py-6">
+      <main className="px-4 py-6 pb-32">
         <div className="mb-4">
           <a
             href={`/${slug}`}
@@ -106,6 +116,16 @@ async function PublicEventContent({
             </p>
           </div>
         )}
+
+        <TicketSelectorSection
+          eventSlug={eventSlug}
+          producerSlug={slug}
+          ticketTypes={ticketTypes}
+          currency={producer.currency}
+          feePercentage={producer.feePercentage}
+          feeFixed={producer.feeFixed}
+          rrppRef={rrppRef}
+        />
       </main>
 
       <PoweredByFooter />
@@ -115,8 +135,10 @@ async function PublicEventContent({
 
 export default function PublicEventDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; eventSlug: string }>;
+  searchParams: Promise<{ ref?: string }>;
 }) {
   return (
     <div className="mx-auto max-w-[480px]">
@@ -127,7 +149,10 @@ export default function PublicEventDetailPage({
           </div>
         }
       >
-        <PublicEventContent paramsPromise={params} />
+        <PublicEventContent
+          paramsPromise={params}
+          searchParamsPromise={searchParams}
+        />
       </Suspense>
     </div>
   );

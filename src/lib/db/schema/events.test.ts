@@ -35,9 +35,6 @@ describe("events schema", () => {
   });
 
   it("has correct table name", () => {
-    const config = events as unknown as { [Symbol.for("drizzle:Name")]: string };
-    // Table name can be accessed via the pgTable's SQL-level name
-    // The table object's Symbol contains the name, but simplest is checking getTableColumns works
     const columns = getTableColumns(events);
     expect(Object.keys(columns).length).toBeGreaterThan(0);
   });

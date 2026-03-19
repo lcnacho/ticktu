@@ -49,6 +49,9 @@ export async function createTicket(data: {
   holderEmail: string;
   isComplimentary: boolean;
   issuedBy?: string;
+  orderId?: string;
+  qrCode?: string;
+  qrHash?: string;
 }): Promise<Ticket> {
   const [ticket] = await db.insert(tickets).values(data).returning();
   return ticket;

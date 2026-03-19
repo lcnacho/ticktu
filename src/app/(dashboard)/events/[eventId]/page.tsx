@@ -9,6 +9,17 @@ import {
   getComplimentaryTickets,
   getComplimentaryCountByType,
 } from "@/lib/db/queries/tickets";
+import { getOrdersByEvent } from "@/lib/db/queries/orders";
+import {
+  getPromotersByTenant,
+  getRRPPPerformanceByEvent,
+} from "@/lib/db/queries/rrpp";
+import { getCheckinStats } from "@/lib/db/queries/validation";
+import {
+  getEventSettlement,
+  getPerEventFinanceSummary,
+} from "@/lib/db/queries/analytics";
+import { getExpensesByEvent } from "@/lib/db/queries/expenses";
 import type { Event, EventStatus } from "@/lib/db/schema/events";
 import type { Batch } from "@/lib/db/schema/batches";
 import { EventStatusBadge } from "@/components/dashboard/event-status-badge";
@@ -17,6 +28,10 @@ import { EventEditForm } from "@/components/dashboard/event-edit-form";
 import { EventListSkeleton } from "@/components/dashboard/event-list-skeleton";
 import { TicketTypeList } from "@/components/dashboard/ticket-type-list";
 import { CortesiasTab } from "@/components/dashboard/cortesias-tab";
+import { EventVentasTab } from "@/components/dashboard/event-ventas-tab";
+import { EventRRPPTab } from "@/components/dashboard/event-rrpp-tab";
+import { EventCheckinsTab } from "@/components/dashboard/event-checkins-tab";
+import { EventFinanzasTab } from "@/components/dashboard/event-finanzas-tab";
 import { formatDateTime } from "@/lib/utils/dates";
 
 type Tab = {
@@ -28,11 +43,11 @@ type Tab = {
 const TABS: Tab[] = [
   { key: "general", label: "General", enabled: true },
   { key: "configuracion", label: "Configuracion", enabled: true },
-  { key: "ventas", label: "Ventas", enabled: false },
-  { key: "rrpp", label: "RRPP", enabled: false },
+  { key: "ventas", label: "Ventas", enabled: true },
+  { key: "rrpp", label: "RRPP", enabled: true },
   { key: "cortesias", label: "Cortesias", enabled: true },
-  { key: "checkins", label: "Check-ins", enabled: false },
-  { key: "finanzas", label: "Finanzas", enabled: false },
+  { key: "checkins", label: "Check-ins", enabled: true },
+  { key: "finanzas", label: "Finanzas", enabled: true },
 ];
 
 async function EventDetailContent({
@@ -50,39 +65,67 @@ async function EventDetailContent({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    notFound();
-  }
+  if (!user) notFound();
 
   const tenantId = user.app_metadata?.tenant_id;
-  if (!tenantId) {
-    notFound();
-  }
+  if (!tenantId) notFound();
 
   const event = await getEventById(tenantId, eventId);
-  if (!event) {
-    notFound();
-  }
+  if (!event) notFound();
 
   const producer = await getProducerByTenantId(tenantId);
   const currency = producer?.currency ?? "UYU";
   const feePercentage = producer?.feePercentage ?? 5;
   const feeFixed = producer?.feeFixed ?? 0;
 
-  // Load ticket types for configuracion and cortesias tabs
-  const allTicketTypes = await getTicketTypesByEvent(tenantId, eventId);
+  // Load ticket types + batches only for tabs that need them
+  const needsTicketTypes = ["configuracion", "cortesias"].includes(currentTab);
+  const allTicketTypes = needsTicketTypes
+    ? await getTicketTypesByEvent(tenantId, eventId)
+    : [];
 
-  // Load batches for each ticket type
   const batchesByType: Record<string, Batch[]> = {};
-  await Promise.all(
-    allTicketTypes.map(async (tt) => {
-      batchesByType[tt.id] = await getBatchesByTicketType(tenantId, tt.id);
-    }),
-  );
+  if (currentTab === "configuracion") {
+    await Promise.all(
+      allTicketTypes.map(async (tt) => {
+        batchesByType[tt.id] = await getBatchesByTicketType(tenantId, tt.id);
+      }),
+    );
+  }
 
-  // Load cortesias data
-  const complimentaryTickets = await getComplimentaryTickets(tenantId, eventId);
-  const countByType = await getComplimentaryCountByType(tenantId, eventId);
+  // Load cortesias data only for cortesias tab
+  const complimentaryTickets = currentTab === "cortesias"
+    ? await getComplimentaryTickets(tenantId, eventId)
+    : [];
+  const countByType = currentTab === "cortesias"
+    ? await getComplimentaryCountByType(tenantId, eventId)
+    : [];
+
+  // Load tab-specific data only when needed
+  const orders = currentTab === "ventas"
+    ? await getOrdersByEvent(tenantId, eventId)
+    : [];
+
+  const [promoters, rrppPerformance] = currentTab === "rrpp"
+    ? await Promise.all([
+        getPromotersByTenant(tenantId),
+        getRRPPPerformanceByEvent(tenantId, eventId),
+      ])
+    : [[], []];
+
+  const checkinStats = currentTab === "checkins"
+    ? await getCheckinStats(tenantId, eventId)
+    : null;
+
+  const [settlement, perEventFinance, eventExpenses] = currentTab === "finanzas"
+    ? await Promise.all([
+        getEventSettlement(tenantId, eventId),
+        getPerEventFinanceSummary(tenantId, eventId),
+        getExpensesByEvent(tenantId, eventId),
+      ])
+    : [null, null, []];
+
+  const baseUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "https://ticktu.com"}/${producer?.slug}/events/${event.slug}`;
 
   return (
     <>
@@ -157,6 +200,20 @@ async function EventDetailContent({
         </div>
       )}
 
+      {currentTab === "ventas" && (
+        <EventVentasTab orders={orders} currency={currency} />
+      )}
+
+      {currentTab === "rrpp" && (
+        <EventRRPPTab
+          eventId={event.id}
+          promoters={promoters}
+          performance={rrppPerformance}
+          currency={currency}
+          baseUrl={baseUrl}
+        />
+      )}
+
       {currentTab === "cortesias" && (
         <CortesiasTab
           eventId={event.id}
@@ -166,12 +223,19 @@ async function EventDetailContent({
         />
       )}
 
-      {!["general", "configuracion", "cortesias"].includes(currentTab) && (
-        <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
-          <p className="text-sm text-gray-400">
-            Esta seccion estara disponible proximamente.
-          </p>
-        </div>
+      {currentTab === "checkins" && checkinStats && (
+        <EventCheckinsTab stats={checkinStats} />
+      )}
+
+      {currentTab === "finanzas" && settlement && perEventFinance && (
+        <EventFinanzasTab
+          eventId={event.id}
+          eventStatus={event.status as EventStatus}
+          settlement={settlement}
+          perEventFinance={perEventFinance}
+          expenses={eventExpenses}
+          currency={currency}
+        />
       )}
     </>
   );
