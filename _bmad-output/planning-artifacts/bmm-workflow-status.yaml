@@ -1,0 +1,27 @@
+# BMM Workflow Status Tracking
+# Tracks completed workflows and their output artifacts
+
+project_name: ticktu
+last_updated: 2026-03-17
+
+# Completed Workflows
+workflow_status:
+  product-brief:
+    status: completed
+    completed_date: 2026-01-25
+    output_file: /home/nacholc/proyectos/ticktu/_bmad-output/planning-artifacts/product-brief-ticktu-2026-01-25.md
+    author: Nacholc
+    notes: Comprehensive product brief covering vision, users, metrics, and MVP scope
+  create-ux-design:
+    status: completed
+    completed_date: 2026-03-17
+    output_file: /home/nacholc/proyectos/ticktu/_bmad-output/planning-artifacts/ux-design-specification.md
+    author: Nacholc
+    notes: Complete UX design specification covering all surfaces (buyer, dashboard, validation app, admin), design system (shadcn/ui + Tailwind), UX consistency patterns, responsive strategy, and accessibility (WCAG Level A)
+
+# Suggested Next Workflows
+next_recommended:
+  - workflow: create-architecture
+    reason: Define technical architecture with UX context as input
+  - workflow: create-epics-and-stories
+    reason: Break down UX and PRD requirements into implementable epics

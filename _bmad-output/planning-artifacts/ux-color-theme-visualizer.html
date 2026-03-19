@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ticktu — Color Theme Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font-sans);
+    background: #0a0a0a;
+    color: #fafafa;
+    line-height: 1.5;
+  }
+
+  /* ============ HEADER ============ */
+  .page-header {
+    text-align: center;
+    padding: 48px 24px 32px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .page-header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+  }
+  .page-header p {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.95rem;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* ============ THEME SWITCHER ============ */
+  .theme-switcher {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    flex-wrap: wrap;
+  }
+  .theme-btn {
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.7);
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .theme-btn:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.2);
+  }
+  .theme-btn.active {
+    border-color: var(--th-primary);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+  }
+  .theme-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* ============ MODE TOGGLE ============ */
+  .mode-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 24px 24px;
+  }
+  .mode-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: transparent;
+    color: rgba(255,255,255,0.5);
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .mode-btn.active {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border-color: rgba(255,255,255,0.2);
+  }
+
+  /* ============ SECTIONS ============ */
+  .section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+  .section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 20px;
+  }
+
+  /* ============ COLOR PALETTE ============ */
+  .palette-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .color-swatch {
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .swatch-color {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 500;
+  }
+  .swatch-label {
+    padding: 8px 10px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.6);
+  }
+
+  /* ============ DEMO CONTAINER ============ */
+  .demo-container {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 32px;
+  }
+  .demo-label {
+    padding: 12px 16px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  /* ============ DASHBOARD DEMO ============ */
+  .dashboard {
+    display: flex;
+    min-height: 500px;
+    transition: all 0.3s ease;
+  }
+  .dash-sidebar {
+    width: 220px;
+    padding: 20px 0;
+    border-right: 1px solid var(--th-border);
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+  }
+  .dash-logo {
+    padding: 0 16px 20px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dash-logo-icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.75rem;
+  }
+  .dash-nav-item {
+    padding: 9px 16px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: default;
+    transition: all 0.15s ease;
+    border-radius: 0;
+    margin: 0 8px;
+    border-radius: 8px;
+  }
+  .dash-nav-item.active {
+    font-weight: 600;
+  }
+  .dash-nav-icon {
+    width: 18px;
+    text-align: center;
+    font-size: 0.9rem;
+  }
+  .dash-content {
+    flex: 1;
+    padding: 24px;
+    transition: all 0.3s ease;
+  }
+  .dash-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  .dash-header h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .dash-header-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-primary {
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: none;
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn-secondary {
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--th-border);
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  /* KPI Cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    padding: 20px;
+    border-radius: 14px;
+    border: 1px solid var(--th-border);
+    transition: all 0.3s ease;
+  }
+  .kpi-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 4px;
+  }
+  .kpi-trend {
+    font-size: 0.72rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .trend-up { color: #22c55e; }
+  .trend-down { color: #ef4444; }
+
+  /* Chart area */
+  .chart-area {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .chart-card {
+    padding: 20px;
+    border-radius: 14px;
+    border: 1px solid var(--th-border);
+    transition: all 0.3s ease;
+  }
+  .chart-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .chart-placeholder {
+    height: 140px;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  .chart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 100%;
+    padding: 0 8px;
+  }
+  .chart-bar {
+    flex: 1;
+    border-radius: 4px 4px 0 0;
+    transition: all 0.3s ease;
+    min-width: 8px;
+  }
+  .chart-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+  }
+  .chart-line svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Table */
+  .table-card {
+    border-radius: 14px;
+    border: 1px solid var(--th-border);
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+  }
+  .table-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .table-row {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr 1fr;
+    padding: 12px 20px;
+    font-size: 0.8rem;
+    border-top: 1px solid var(--th-border);
+    transition: all 0.15s ease;
+  }
+  .table-row.header {
+    font-weight: 600;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.68rem;
+    font-weight: 600;
+  }
+
+  /* ============ BUYER FLOW DEMO ============ */
+  .buyer-flow {
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 32px 24px;
+    transition: all 0.3s ease;
+  }
+  .buyer-header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .buyer-logo {
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+  .buyer-event-name {
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+  .event-hero {
+    width: 100%;
+    height: 180px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-end;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(0,0,0,0.7), rgba(0,0,0,0.3));
+  }
+  .event-hero-text h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .event-hero-text p {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.7);
+  }
+  .ticket-option {
+    padding: 16px;
+    border-radius: 12px;
+    border: 2px solid var(--th-border);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .ticket-option.selected {
+    border-color: var(--th-primary);
+  }
+  .ticket-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .ticket-desc {
+    font-size: 0.72rem;
+  }
+  .ticket-price {
+    font-size: 1.1rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .qty-selector {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .qty-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--th-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .qty-value {
+    font-size: 1rem;
+    font-weight: 700;
+    min-width: 24px;
+    text-align: center;
+  }
+  .buyer-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    margin: 16px 0;
+    border-top: 1px solid var(--th-border);
+  }
+  .buyer-total-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  .buyer-total-amount {
+    font-size: 1.3rem;
+    font-weight: 800;
+  }
+  .buyer-cta {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    letter-spacing: -0.01em;
+  }
+
+  /* ============ SCAN RESULT DEMO ============ */
+  .scan-demos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+  .scan-result {
+    height: 280px;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    transition: all 0.3s ease;
+  }
+  .scan-icon {
+    font-size: 3rem;
+    line-height: 1;
+  }
+  .scan-text {
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+  .scan-detail {
+    font-size: 0.78rem;
+    font-weight: 500;
+    opacity: 0.7;
+  }
+  .scan-valid {
+    background: #22c55e;
+    color: #fff;
+  }
+  .scan-invalid {
+    background: #ef4444;
+    color: #fff;
+  }
+
+  /* ============ COMPARISON ============ */
+  .comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+  .comparison-card {
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.08);
+    overflow: hidden;
+  }
+  .comparison-header {
+    padding: 16px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02);
+  }
+  .comparison-body {
+    padding: 20px;
+  }
+
+  /* ============ NOTES ============ */
+  .theme-notes {
+    padding: 20px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 16px;
+  }
+  .theme-notes h4 {
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .theme-notes p, .theme-notes li {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.6;
+  }
+  .theme-notes ul {
+    padding-left: 16px;
+  }
+  .theme-notes li {
+    margin-bottom: 4px;
+  }
+
+  @media (max-width: 768px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .chart-area { grid-template-columns: 1fr; }
+    .dash-sidebar { display: none; }
+    .comparison-grid { grid-template-columns: 1fr; }
+    .scan-demos { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Ticktu — Color Theme Visualizer</h1>
+  <p>Exploring visual directions based on the retro-arcade palette. Each theme is shown in real Ticktu UI contexts: dashboard, buyer flow, and validation app.</p>
+</div>
+
+<div class="theme-switcher" id="themeSwitcher"></div>
+<div class="mode-toggle">
+  <button class="mode-btn active" onclick="setMode('dark')">Dark Mode</button>
+  <button class="mode-btn" onclick="setMode('light')">Light Mode</button>
+</div>
+
+<!-- PALETTE SECTION -->
+<div class="section">
+  <div class="section-title">Color Palette</div>
+  <div class="palette-grid" id="paletteGrid"></div>
+  <div class="theme-notes" id="themeNotes"></div>
+</div>
+
+<!-- DASHBOARD DEMO -->
+<div class="section">
+  <div class="section-title">Producer Dashboard</div>
+  <div class="demo-container">
+    <div class="demo-label">Desktop — Command Center View</div>
+    <div class="dashboard" id="dashboardDemo">
+      <div class="dash-sidebar" id="dashSidebar">
+        <div class="dash-logo">
+          <div class="dash-logo-icon" id="logoIcon">T</div>
+          <span>Ticktu</span>
+        </div>
+        <div class="dash-nav-item active" id="navDashboard">
+          <span class="dash-nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span> Dashboard
+        </div>
+        <div class="dash-nav-item">
+          <span class="dash-nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span> Eventos
+        </div>
+        <div class="dash-nav-item">
+          <span class="dash-nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Ventas
+        </div>
+        <div class="dash-nav-item">
+          <span class="dash-nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> RRPP
+        </div>
+        <div class="dash-nav-item">
+          <span class="dash-nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg></span> Boletería
+        </div>
+        <div class="dash-nav-item">
+          <span class="dash-nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> Acreditación
+        </div>
+        <div class="dash-nav-item">
+          <span class="dash-nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span> Finanzas
+        </div>
+      </div>
+      <div class="dash-content" id="dashContent">
+        <div class="dash-header">
+          <h2>Dashboard</h2>
+          <div class="dash-header-actions">
+            <button class="btn-secondary" id="btnFilter">Últimos 30 días ▾</button>
+            <button class="btn-primary" id="btnNew">+ Nuevo Evento</button>
+          </div>
+        </div>
+        <div class="kpi-grid" id="kpiGrid">
+          <div class="kpi-card" id="kpi1">
+            <div class="kpi-label" id="kpiLabel1">Tickets Vendidos</div>
+            <div class="kpi-value">3,247</div>
+            <div class="kpi-trend trend-up">↑ 12.6%</div>
+          </div>
+          <div class="kpi-card" id="kpi2">
+            <div class="kpi-label" id="kpiLabel2">Ingresos</div>
+            <div class="kpi-value">$4.87M</div>
+            <div class="kpi-trend trend-up">↑ 8.2%</div>
+          </div>
+          <div class="kpi-card" id="kpi3">
+            <div class="kpi-label" id="kpiLabel3">Gastos</div>
+            <div class="kpi-value">$2.1M</div>
+            <div class="kpi-trend trend-down">↑ 5.1%</div>
+          </div>
+          <div class="kpi-card" id="kpi4">
+            <div class="kpi-label" id="kpiLabel4">Balance</div>
+            <div class="kpi-value" style="color:#22c55e">+$2.77M</div>
+            <div class="kpi-trend trend-up">↑ 15.3%</div>
+          </div>
+        </div>
+        <div class="chart-area">
+          <div class="chart-card" id="chartMain">
+            <div class="chart-title">Ventas por día</div>
+            <div class="chart-placeholder">
+              <div class="chart-bars" id="chartBars"></div>
+            </div>
+          </div>
+          <div class="chart-card" id="chartSide">
+            <div class="chart-title">RRPP Performance</div>
+            <div id="rrppList" style="font-size: 0.8rem;"></div>
+          </div>
+        </div>
+        <div class="table-card" id="tableCard">
+          <div class="table-header">
+            <div class="table-title">Ventas Recientes</div>
+          </div>
+          <div class="table-row header" id="tableHeader">
+            <div>Comprador</div>
+            <div>Evento</div>
+            <div>Monto</div>
+            <div>Estado</div>
+          </div>
+          <div class="table-row" id="tableRow1">
+            <div>María González</div>
+            <div>Noche Odisea</div>
+            <div style="font-weight:600">$2,500</div>
+            <div><span class="badge" id="badge1">Confirmado</span></div>
+          </div>
+          <div class="table-row" id="tableRow2">
+            <div>Juan Pérez</div>
+            <div>Noche Odisea</div>
+            <div style="font-weight:600">$1,800</div>
+            <div><span class="badge" id="badge2">Confirmado</span></div>
+          </div>
+          <div class="table-row" id="tableRow3">
+            <div>Ana López</div>
+            <div>Fiesta Verano</div>
+            <div style="font-weight:600">$3,200</div>
+            <div><span class="badge" id="badge3">Pendiente</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BUYER FLOW DEMO -->
+<div class="section">
+  <div class="section-title">Buyer Purchase Flow (Mobile)</div>
+  <div class="demo-container">
+    <div class="demo-label">Mobile — Event Page + Ticket Selection</div>
+    <div id="buyerBg" style="transition: all 0.3s ease;">
+      <div class="buyer-flow" id="buyerFlow">
+        <div class="buyer-header">
+          <div class="buyer-logo" id="buyerLogo">ODISEA</div>
+          <div class="buyer-event-name" id="buyerEventName">Noche Odisea — Sábado 22 Mar</div>
+        </div>
+        <div class="event-hero" id="eventHero">
+          <div class="event-hero-text">
+            <h3>Noche Odisea</h3>
+            <p>Sáb 22 Mar · 23:00 — La Trastienda</p>
+          </div>
+        </div>
+        <div class="ticket-option selected" id="ticket1">
+          <div>
+            <div class="ticket-name">Early Bird</div>
+            <div class="ticket-desc" id="ticketDesc1">Entrada general — Quedan 23</div>
+          </div>
+          <div>
+            <div class="ticket-price" id="ticketPrice1">$1,200</div>
+            <div class="qty-selector">
+              <div class="qty-btn" id="qtyBtn1">−</div>
+              <div class="qty-value">2</div>
+              <div class="qty-btn" id="qtyBtn2">+</div>
+            </div>
+          </div>
+        </div>
+        <div class="ticket-option" id="ticket2">
+          <div>
+            <div class="ticket-name">General</div>
+            <div class="ticket-desc" id="ticketDesc2">Entrada general</div>
+          </div>
+          <div>
+            <div class="ticket-price" id="ticketPrice2">$1,800</div>
+          </div>
+        </div>
+        <div class="ticket-option" id="ticket3">
+          <div>
+            <div class="ticket-name">VIP</div>
+            <div class="ticket-desc" id="ticketDesc3">Acceso VIP + barra libre</div>
+          </div>
+          <div>
+            <div class="ticket-price" id="ticketPrice3">$3,500</div>
+          </div>
+        </div>
+        <div class="buyer-total" id="buyerTotal">
+          <div class="buyer-total-label">Total (2 tickets)</div>
+          <div class="buyer-total-amount" id="totalAmount">$2,400</div>
+        </div>
+        <button class="buyer-cta" id="buyerCta">Pagar $2,400</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VALIDATION APP DEMO -->
+<div class="section">
+  <div class="section-title">Validation App — Scan Results</div>
+  <div class="demo-container">
+    <div class="demo-label">Scan Feedback (Color stays fixed — green/red regardless of theme)</div>
+    <div class="scan-demos">
+      <div class="scan-result scan-valid">
+        <div class="scan-icon">✓</div>
+        <div class="scan-text">VÁLIDO</div>
+        <div class="scan-detail">General — #TK-2847</div>
+      </div>
+      <div class="scan-result scan-invalid">
+        <div class="scan-icon">✕</div>
+        <div class="scan-text">INVÁLIDO</div>
+        <div class="scan-detail">Ya fue usado — 21:34</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ THEME DEFINITIONS ============
+const themes = {
+  'retro-arcade': {
+    name: 'Retro Arcade (Base)',
+    dot: 'oklch(0.8871 0.2122 128.5041)',
+    notes: {
+      title: 'Retro Arcade — Your Starting Point',
+      description: 'Bold neon lime green on deep navy. The original theme you liked from tweakcn.',
+      pros: ['Strong nightlife/event DNA', 'High energy primary color', 'Great dark mode contrast', 'Distinctive — not generic SaaS blue'],
+      cons: ['Lime green on white (light mode) can feel less premium', 'High saturation primary may fatigue on data-dense screens', 'Limited warm tones for hierarchy']
+    },
+    dark: {
+      bg: 'oklch(0.1288 0.0406 264.6952)',
+      fg: 'oklch(0.9842 0.0034 247.8575)',
+      card: 'oklch(0.2077 0.0398 265.7549)',
+      cardFg: 'oklch(0.9842 0.0034 247.8575)',
+      primary: 'oklch(0.8871 0.2122 128.5041)',
+      primaryFg: 'oklch(0 0 0)',
+      secondary: 'oklch(0.2795 0.0368 260.0310)',
+      secondaryFg: 'oklch(0.9842 0.0034 247.8575)',
+      muted: 'oklch(0.2795 0.0368 260.0310)',
+      mutedFg: 'oklch(0.7107 0.0351 256.7878)',
+      accent: 'oklch(0.3925 0.0896 152.5353)',
+      accentFg: 'oklch(0.8871 0.2122 128.5041)',
+      border: 'oklch(0.2795 0.0368 260.0310)',
+      destructive: 'oklch(0.4437 0.1613 26.8994)',
+      chart1: 'oklch(0.8871 0.2122 128.5041)',
+      chart2: 'oklch(0.6231 0.1880 259.8145)',
+      chart3: 'oklch(0.7227 0.1920 149.5793)',
+      chart4: 'oklch(0.6268 0.2325 303.9004)',
+      chart5: 'oklch(0.7686 0.1647 70.0804)',
+    },
+    light: {
+      bg: 'oklch(0.9892 0.0054 117.9205)',
+      fg: 'oklch(0.2077 0.0398 265.7549)',
+      card: 'oklch(1.0000 0 0)',
+      cardFg: 'oklch(0.2077 0.0398 265.7549)',
+      primary: 'oklch(0.8871 0.2122 128.5041)',
+      primaryFg: 'oklch(0 0 0)',
+      secondary: 'oklch(0.3717 0.0392 257.2870)',
+      secondaryFg: 'oklch(0.9842 0.0034 247.8575)',
+      muted: 'oklch(0.9683 0.0069 247.8956)',
+      mutedFg: 'oklch(0.5544 0.0407 257.4166)',
+      accent: 'oklch(0.9819 0.0181 155.8263)',
+      accentFg: 'oklch(0.4479 0.1083 151.3277)',
+      border: 'oklch(0.9288 0.0126 255.5078)',
+      destructive: 'oklch(0.6368 0.2078 25.3313)',
+      chart1: 'oklch(0.8871 0.2122 128.5041)',
+      chart2: 'oklch(0.3717 0.0392 257.2870)',
+      chart3: 'oklch(0.7227 0.1920 149.5793)',
+      chart4: 'oklch(0.5544 0.0407 257.4166)',
+      chart5: 'oklch(0.7107 0.0351 256.7878)',
+    }
+  },
+  'electric-night': {
+    name: 'Electric Night',
+    dot: 'oklch(0.7200 0.2100 265.0000)',
+    notes: {
+      title: 'Electric Night — Premium Purple Shift',
+      description: 'Takes the arcade energy and shifts it to electric violet/indigo. Feels more premium and less "gaming". The green becomes an accent for success states and charts.',
+      pros: ['More premium/luxury feel than pure green', 'Purple/violet is strongly associated with nightlife and events', 'Better hierarchy — green works as accent, purple as primary', 'Excellent dark mode presence'],
+      cons: ['Less distinctive than the lime green', 'Purple can trend toward "generic tech startup" if not careful']
+    },
+    dark: {
+      bg: 'oklch(0.1200 0.0350 280.0000)',
+      fg: 'oklch(0.9600 0.0080 280.0000)',
+      card: 'oklch(0.1800 0.0380 278.0000)',
+      cardFg: 'oklch(0.9600 0.0080 280.0000)',
+      primary: 'oklch(0.7200 0.2100 265.0000)',
+      primaryFg: 'oklch(1.0000 0 0)',
+      secondary: 'oklch(0.2500 0.0400 275.0000)',
+      secondaryFg: 'oklch(0.9200 0.0100 275.0000)',
+      muted: 'oklch(0.2500 0.0300 278.0000)',
+      mutedFg: 'oklch(0.6500 0.0400 275.0000)',
+      accent: 'oklch(0.3800 0.0900 152.0000)',
+      accentFg: 'oklch(0.8500 0.1800 130.0000)',
+      border: 'oklch(0.2600 0.0350 278.0000)',
+      destructive: 'oklch(0.4800 0.1800 25.0000)',
+      chart1: 'oklch(0.7200 0.2100 265.0000)',
+      chart2: 'oklch(0.8200 0.1800 130.0000)',
+      chart3: 'oklch(0.6800 0.1600 340.0000)',
+      chart4: 'oklch(0.7500 0.1500 65.0000)',
+      chart5: 'oklch(0.6000 0.1900 200.0000)',
+    },
+    light: {
+      bg: 'oklch(0.9800 0.0060 280.0000)',
+      fg: 'oklch(0.1800 0.0400 278.0000)',
+      card: 'oklch(1.0000 0 0)',
+      cardFg: 'oklch(0.1800 0.0400 278.0000)',
+      primary: 'oklch(0.5800 0.2000 268.0000)',
+      primaryFg: 'oklch(1.0000 0 0)',
+      secondary: 'oklch(0.3500 0.0400 275.0000)',
+      secondaryFg: 'oklch(0.9500 0.0050 275.0000)',
+      muted: 'oklch(0.9500 0.0080 278.0000)',
+      mutedFg: 'oklch(0.5000 0.0400 275.0000)',
+      accent: 'oklch(0.9600 0.0200 155.0000)',
+      accentFg: 'oklch(0.4000 0.1100 152.0000)',
+      border: 'oklch(0.9200 0.0100 278.0000)',
+      destructive: 'oklch(0.6000 0.2000 25.0000)',
+      chart1: 'oklch(0.5800 0.2000 268.0000)',
+      chart2: 'oklch(0.7500 0.1600 130.0000)',
+      chart3: 'oklch(0.6200 0.1400 340.0000)',
+      chart4: 'oklch(0.6800 0.1300 65.0000)',
+      chart5: 'oklch(0.5500 0.1600 200.0000)',
+    }
+  },
+  'midnight-lime': {
+    name: 'Midnight Lime',
+    dot: 'oklch(0.8200 0.1800 135.0000)',
+    notes: {
+      title: 'Midnight Lime — Refined Arcade',
+      description: 'Keeps the lime green DNA but dials back saturation slightly and warms the backgrounds. Feels more mature than retro-arcade while keeping the same energy. The "grown up" version.',
+      pros: ['Retains the distinctive lime identity you liked', 'Slightly desaturated primary is easier on the eyes for long dashboard sessions', 'Warmer dark backgrounds feel more inviting', 'Better contrast ratios overall'],
+      cons: ['Subtle difference from retro-arcade — might not feel different enough', 'Still relies on green as hero color']
+    },
+    dark: {
+      bg: 'oklch(0.1400 0.0200 250.0000)',
+      fg: 'oklch(0.9500 0.0050 100.0000)',
+      card: 'oklch(0.1900 0.0250 252.0000)',
+      cardFg: 'oklch(0.9500 0.0050 100.0000)',
+      primary: 'oklch(0.8200 0.1800 135.0000)',
+      primaryFg: 'oklch(0.1000 0.0200 135.0000)',
+      secondary: 'oklch(0.2800 0.0250 255.0000)',
+      secondaryFg: 'oklch(0.9200 0.0060 250.0000)',
+      muted: 'oklch(0.2500 0.0200 252.0000)',
+      mutedFg: 'oklch(0.6500 0.0250 252.0000)',
+      accent: 'oklch(0.4000 0.0700 190.0000)',
+      accentFg: 'oklch(0.8500 0.1000 190.0000)',
+      border: 'oklch(0.2600 0.0220 252.0000)',
+      destructive: 'oklch(0.4800 0.1600 25.0000)',
+      chart1: 'oklch(0.8200 0.1800 135.0000)',
+      chart2: 'oklch(0.6500 0.1500 250.0000)',
+      chart3: 'oklch(0.7500 0.1200 190.0000)',
+      chart4: 'oklch(0.7000 0.1600 55.0000)',
+      chart5: 'oklch(0.6000 0.1800 320.0000)',
+    },
+    light: {
+      bg: 'oklch(0.9800 0.0040 100.0000)',
+      fg: 'oklch(0.1900 0.0300 252.0000)',
+      card: 'oklch(1.0000 0 0)',
+      cardFg: 'oklch(0.1900 0.0300 252.0000)',
+      primary: 'oklch(0.7200 0.1600 138.0000)',
+      primaryFg: 'oklch(0.1000 0.0200 135.0000)',
+      secondary: 'oklch(0.3500 0.0300 255.0000)',
+      secondaryFg: 'oklch(0.9500 0.0050 250.0000)',
+      muted: 'oklch(0.9500 0.0060 100.0000)',
+      mutedFg: 'oklch(0.5000 0.0300 252.0000)',
+      accent: 'oklch(0.9500 0.0200 190.0000)',
+      accentFg: 'oklch(0.3800 0.0900 190.0000)',
+      border: 'oklch(0.9100 0.0080 252.0000)',
+      destructive: 'oklch(0.6200 0.2000 25.0000)',
+      chart1: 'oklch(0.7200 0.1600 138.0000)',
+      chart2: 'oklch(0.5500 0.1300 250.0000)',
+      chart3: 'oklch(0.6500 0.1000 190.0000)',
+      chart4: 'oklch(0.6300 0.1400 55.0000)',
+      chart5: 'oklch(0.5500 0.1500 320.0000)',
+    }
+  },
+  'neon-teal': {
+    name: 'Neon Teal',
+    dot: 'oklch(0.8000 0.1700 185.0000)',
+    notes: {
+      title: 'Neon Teal — Cool & Professional',
+      description: 'Shifts the energy from lime to teal/cyan. Feels more "tech platform" and professional while keeping the neon energy. Strong association with fintech and data platforms.',
+      pros: ['Very strong "premium tech platform" feel', 'Teal reads as trustworthy and modern', 'Excellent for data visualization — teal pops on dark backgrounds', 'Works equally well in light and dark modes'],
+      cons: ['Less nightlife/party energy than green or purple', 'Could feel too "corporate" for an events platform', 'Similar to many fintech platforms']
+    },
+    dark: {
+      bg: 'oklch(0.1300 0.0200 230.0000)',
+      fg: 'oklch(0.9500 0.0060 230.0000)',
+      card: 'oklch(0.1800 0.0250 232.0000)',
+      cardFg: 'oklch(0.9500 0.0060 230.0000)',
+      primary: 'oklch(0.8000 0.1700 185.0000)',
+      primaryFg: 'oklch(0.1000 0.0300 185.0000)',
+      secondary: 'oklch(0.2600 0.0300 232.0000)',
+      secondaryFg: 'oklch(0.9200 0.0060 230.0000)',
+      muted: 'oklch(0.2400 0.0250 232.0000)',
+      mutedFg: 'oklch(0.6200 0.0300 232.0000)',
+      accent: 'oklch(0.3500 0.0800 285.0000)',
+      accentFg: 'oklch(0.7500 0.1600 285.0000)',
+      border: 'oklch(0.2500 0.0280 232.0000)',
+      destructive: 'oklch(0.4800 0.1700 25.0000)',
+      chart1: 'oklch(0.8000 0.1700 185.0000)',
+      chart2: 'oklch(0.7000 0.1500 285.0000)',
+      chart3: 'oklch(0.8000 0.1400 90.0000)',
+      chart4: 'oklch(0.6500 0.1800 340.0000)',
+      chart5: 'oklch(0.7500 0.1200 55.0000)',
+    },
+    light: {
+      bg: 'oklch(0.9800 0.0050 230.0000)',
+      fg: 'oklch(0.1800 0.0300 232.0000)',
+      card: 'oklch(1.0000 0 0)',
+      cardFg: 'oklch(0.1800 0.0300 232.0000)',
+      primary: 'oklch(0.6500 0.1500 188.0000)',
+      primaryFg: 'oklch(1.0000 0 0)',
+      secondary: 'oklch(0.3500 0.0350 232.0000)',
+      secondaryFg: 'oklch(0.9500 0.0050 230.0000)',
+      muted: 'oklch(0.9500 0.0060 230.0000)',
+      mutedFg: 'oklch(0.4800 0.0350 232.0000)',
+      accent: 'oklch(0.9400 0.0200 285.0000)',
+      accentFg: 'oklch(0.4500 0.1200 285.0000)',
+      border: 'oklch(0.9100 0.0080 232.0000)',
+      destructive: 'oklch(0.6200 0.2000 25.0000)',
+      chart1: 'oklch(0.6500 0.1500 188.0000)',
+      chart2: 'oklch(0.5500 0.1300 285.0000)',
+      chart3: 'oklch(0.7000 0.1200 90.0000)',
+      chart4: 'oklch(0.6000 0.1500 340.0000)',
+      chart5: 'oklch(0.6500 0.1000 55.0000)',
+    }
+  },
+  'copper-inverted': {
+    name: 'Copper Inverted',
+    dot: 'oklch(0.4138 0.0846 259.8759)',
+    fontFamily: "'Outfit', sans-serif",
+    notes: {
+      title: 'Copper Inverted — Blues Lead, Orange Accents',
+      description: 'Burnt Copper flipped: blue-purple becomes the primary (buttons, CTAs, sidebar highlights), and the warm orange moves to secondary/accent and charts. The blue leads with trust and professionalism while orange adds energy where data lives.',
+      pros: ['Blue primary = trust, professionalism — strong for payments and dashboards', 'Orange accents add warmth and energy to charts and data highlights', 'Best of both worlds — trustworthy base with distinctive warm personality', 'Blue CTAs are the most "clickable" color in UX research', 'Orange charts pop against blue UI — high visual separation'],
+      cons: ['Blue primary is more common — less distinctive than orange-first', 'May feel more "corporate SaaS" than "event platform"', 'Needs careful balance to avoid orange feeling like an afterthought']
+    },
+    dark: {
+      bg: 'oklch(0.2178 0 0)',
+      fg: 'oklch(0.9219 0 0)',
+      card: 'oklch(0.2435 0 0)',
+      cardFg: 'oklch(0.9219 0 0)',
+      primary: 'oklch(0.4138 0.0846 259.8759)',
+      primaryFg: 'oklch(1.0000 0 0)',
+      secondary: 'oklch(0.6420 0.1691 38.5815)',
+      secondaryFg: 'oklch(0.1000 0 0)',
+      muted: 'oklch(0.2850 0 0)',
+      mutedFg: 'oklch(0.5999 0 0)',
+      accent: 'oklch(0.5500 0.1400 38.0000)',
+      accentFg: 'oklch(0.9500 0.0200 40.0000)',
+      border: 'oklch(0.3290 0 0)',
+      destructive: 'oklch(0.6368 0.2078 25.3313)',
+      chart1: 'oklch(0.7800 0.1500 45.0000)',
+      chart2: 'oklch(0.6678 0.1546 41.6200)',
+      chart3: 'oklch(0.5957 0.1807 19.9763)',
+      chart4: 'oklch(0.4500 0.0800 259.0000)',
+      chart5: 'oklch(0.7859 0.1342 83.6986)',
+    },
+    light: {
+      bg: 'oklch(0.9383 0.0042 236.4993)',
+      fg: 'oklch(0.3211 0 0)',
+      card: 'oklch(1.0000 0 0)',
+      cardFg: 'oklch(0.3211 0 0)',
+      primary: 'oklch(0.4138 0.0846 259.8759)',
+      primaryFg: 'oklch(1.0000 0 0)',
+      secondary: 'oklch(0.6420 0.1691 38.5815)',
+      secondaryFg: 'oklch(1.0000 0 0)',
+      muted: 'oklch(0.9846 0.0017 247.8389)',
+      mutedFg: 'oklch(0.5510 0.0234 264.3637)',
+      accent: 'oklch(0.9500 0.0300 40.0000)',
+      accentFg: 'oklch(0.5000 0.1400 38.0000)',
+      border: 'oklch(0.8452 0 0)',
+      destructive: 'oklch(0.6368 0.2078 25.3313)',
+      chart1: 'oklch(0.7800 0.1500 45.0000)',
+      chart2: 'oklch(0.6678 0.1546 41.6200)',
+      chart3: 'oklch(0.5957 0.1807 19.9763)',
+      chart4: 'oklch(0.4138 0.0846 259.8759)',
+      chart5: 'oklch(0.7859 0.1342 83.6986)',
+    }
+  },
+  'burnt-copper': {
+    name: 'Burnt Copper',
+    dot: 'oklch(0.6420 0.1691 38.5815)',
+    fontFamily: "'Outfit', sans-serif",
+    notes: {
+      title: 'Burnt Copper — Warm & Professional',
+      description: 'Warm burnt orange/copper primary with blue-purple secondary. Uses Outfit font (geometric sans-serif). Neutral dark backgrounds instead of blue-tinted.',
+      pros: ['Warm, inviting, distinctive palette', 'Orange reads as energetic and approachable', 'Blue-purple secondary adds depth and contrast', 'Neutral dark backgrounds — easy on the eyes'],
+      cons: ['Less "nightlife neon" energy than lime green', 'Orange primary needs careful accessibility handling on light bg']
+    },
+    dark: {
+      bg: 'oklch(0.2178 0 0)',
+      fg: 'oklch(0.9219 0 0)',
+      card: 'oklch(0.2435 0 0)',
+      cardFg: 'oklch(0.9219 0 0)',
+      primary: 'oklch(0.6420 0.1691 38.5815)',
+      primaryFg: 'oklch(1.0000 0 0)',
+      secondary: 'oklch(0.3743 0.0726 258.5213)',
+      secondaryFg: 'oklch(0.9219 0 0)',
+      muted: 'oklch(0.2850 0 0)',
+      mutedFg: 'oklch(0.5999 0 0)',
+      accent: 'oklch(0.3380 0.0589 267.5867)',
+      accentFg: 'oklch(0.8823 0.0571 254.1284)',
+      border: 'oklch(0.3290 0 0)',
+      destructive: 'oklch(0.6368 0.2078 25.3313)',
+      chart1: 'oklch(0.7124 0.0606 248.6896)',
+      chart2: 'oklch(0.6678 0.1546 41.6200)',
+      chart3: 'oklch(0.5957 0.1807 19.9763)',
+      chart4: 'oklch(0.7859 0.1342 83.6986)',
+      chart5: 'oklch(0.4227 0.0732 267.3899)',
+    },
+    light: {
+      bg: 'oklch(0.9383 0.0042 236.4993)',
+      fg: 'oklch(0.3211 0 0)',
+      card: 'oklch(1.0000 0 0)',
+      cardFg: 'oklch(0.3211 0 0)',
+      primary: 'oklch(0.6420 0.1691 38.5815)',
+      primaryFg: 'oklch(1.0000 0 0)',
+      secondary: 'oklch(0.4138 0.0846 259.8759)',
+      secondaryFg: 'oklch(1.0000 0 0)',
+      muted: 'oklch(0.9846 0.0017 247.8389)',
+      mutedFg: 'oklch(0.5510 0.0234 264.3637)',
+      accent: 'oklch(0.9119 0.0222 243.8174)',
+      accentFg: 'oklch(0.3791 0.1378 265.5222)',
+      border: 'oklch(0.8452 0 0)',
+      destructive: 'oklch(0.6368 0.2078 25.3313)',
+      chart1: 'oklch(0.6693 0.0706 248.9230)',
+      chart2: 'oklch(0.6678 0.1546 41.6200)',
+      chart3: 'oklch(0.5957 0.1807 19.9763)',
+      chart4: 'oklch(0.7859 0.1342 83.6986)',
+      chart5: 'oklch(0.4227 0.0732 267.3899)',
+    }
+  },
+  'ink-amber': {
+    name: 'Ink & Amber',
+    dot: 'oklch(0.21 0.006 285.885)',
+    notes: {
+      title: 'Ink & Amber — Editorial Brutalism',
+      description: 'Near-black primary on white. Zero border-radius — sharp, editorial, brutalist. The twist: warm amber/gold chart colors inject life into the monochrome base. Like a premium magazine layout with data highlights.',
+      pros: ['Maximum contrast — accessibility champion', 'Zero radius is bold and distinctive — no one in ticketing does this', 'Amber/gold charts on monochrome base create striking data visualization', 'Timeless — black-on-white never looks dated', 'Charts become the only color, drawing attention to data'],
+      cons: ['Could feel too stark or corporate without the chart colors', 'Zero radius may feel harsh on mobile touch interfaces', 'Black primary buttons lack the "fun" energy of events', 'No color personality outside of charts']
+    },
+    dark: {
+      bg: 'oklch(0.145 0 0)',
+      fg: 'oklch(0.985 0 0)',
+      card: 'oklch(0.205 0 0)',
+      cardFg: 'oklch(0.985 0 0)',
+      primary: 'oklch(0.92 0.004 286.32)',
+      primaryFg: 'oklch(0.141 0.005 285.823)',
+      secondary: 'oklch(0.274 0.006 286.033)',
+      secondaryFg: 'oklch(0.985 0 0)',
+      muted: 'oklch(0.269 0 0)',
+      mutedFg: 'oklch(0.708 0 0)',
+      accent: 'oklch(0.92 0.004 286.32)',
+      accentFg: 'oklch(0.141 0.005 285.823)',
+      border: 'oklch(0.3 0 0)',
+      destructive: 'oklch(0.704 0.191 22.216)',
+      chart1: 'oklch(0.879 0.169 91.605)',
+      chart2: 'oklch(0.769 0.188 70.08)',
+      chart3: 'oklch(0.666 0.179 58.318)',
+      chart4: 'oklch(0.555 0.163 48.998)',
+      chart5: 'oklch(0.473 0.137 46.201)',
+    },
+    light: {
+      bg: 'oklch(1 0 0)',
+      fg: 'oklch(0.141 0.005 285.823)',
+      card: 'oklch(1 0 0)',
+      cardFg: 'oklch(0.141 0.005 285.823)',
+      primary: 'oklch(0.21 0.006 285.885)',
+      primaryFg: 'oklch(0.985 0 0)',
+      secondary: 'oklch(0.967 0.001 286.375)',
+      secondaryFg: 'oklch(0.21 0.006 285.885)',
+      muted: 'oklch(0.967 0.001 286.375)',
+      mutedFg: 'oklch(0.552 0.016 285.938)',
+      accent: 'oklch(0.21 0.006 285.885)',
+      accentFg: 'oklch(0.985 0 0)',
+      border: 'oklch(0.92 0.004 286.32)',
+      destructive: 'oklch(0.577 0.245 27.325)',
+      chart1: 'oklch(0.879 0.169 91.605)',
+      chart2: 'oklch(0.769 0.188 70.08)',
+      chart3: 'oklch(0.666 0.179 58.318)',
+      chart4: 'oklch(0.555 0.163 48.998)',
+      chart5: 'oklch(0.473 0.137 46.201)',
+    }
+  },
+  'vivid-purple': {
+    name: 'Vivid Purple',
+    dot: 'oklch(0.496 0.265 301.924)',
+    notes: {
+      title: 'Vivid Purple — Bold & Expressive',
+      description: 'High-saturation purple/violet primary (0.265 chroma — very vivid). Monochromatic purple chart spectrum from lavender to deep violet. Rounded corners (0.875rem). The most expressive and "nightlife" option in the collection.',
+      pros: ['Purple/violet is the classic nightlife color — strong event DNA', 'Highest saturation of any theme — makes a statement', 'Monochromatic purple charts are visually stunning', 'Rounded radius (0.875rem) adds playfulness to balance the intensity', 'Lavender-tinted button text is a nice subtle touch'],
+      cons: ['Very saturated — may fatigue on data-dense screens', 'Purple can polarize — people either love or hate it', 'Similar hue to destructive (red-purple) could cause confusion', 'Monochromatic purple charts may be hard to distinguish']
+    },
+    dark: {
+      bg: 'oklch(0.145 0 0)',
+      fg: 'oklch(0.985 0 0)',
+      card: 'oklch(0.205 0 0)',
+      cardFg: 'oklch(0.985 0 0)',
+      primary: 'oklch(0.496 0.265 301.924)',
+      primaryFg: 'oklch(0.977 0.014 308.299)',
+      secondary: 'oklch(0.274 0.006 286.033)',
+      secondaryFg: 'oklch(0.985 0 0)',
+      muted: 'oklch(0.269 0 0)',
+      mutedFg: 'oklch(0.708 0 0)',
+      accent: 'oklch(0.269 0 0)',
+      accentFg: 'oklch(0.985 0 0)',
+      border: 'oklch(0.3 0 0)',
+      destructive: 'oklch(0.704 0.191 22.216)',
+      chart1: 'oklch(0.827 0.119 306.383)',
+      chart2: 'oklch(0.627 0.265 303.9)',
+      chart3: 'oklch(0.558 0.288 302.321)',
+      chart4: 'oklch(0.496 0.265 301.924)',
+      chart5: 'oklch(0.438 0.218 303.724)',
+    },
+    light: {
+      bg: 'oklch(1 0 0)',
+      fg: 'oklch(0.145 0 0)',
+      card: 'oklch(1 0 0)',
+      cardFg: 'oklch(0.145 0 0)',
+      primary: 'oklch(0.496 0.265 301.924)',
+      primaryFg: 'oklch(0.977 0.014 308.299)',
+      secondary: 'oklch(0.967 0.001 286.375)',
+      secondaryFg: 'oklch(0.21 0.006 285.885)',
+      muted: 'oklch(0.97 0 0)',
+      mutedFg: 'oklch(0.556 0 0)',
+      accent: 'oklch(0.97 0 0)',
+      accentFg: 'oklch(0.205 0 0)',
+      border: 'oklch(0.922 0 0)',
+      destructive: 'oklch(0.577 0.245 27.325)',
+      chart1: 'oklch(0.827 0.119 306.383)',
+      chart2: 'oklch(0.627 0.265 303.9)',
+      chart3: 'oklch(0.558 0.288 302.321)',
+      chart4: 'oklch(0.496 0.265 301.924)',
+      chart5: 'oklch(0.438 0.218 303.724)',
+    }
+  },
+  'jade-mint': {
+    name: 'Jade Mint',
+    dot: 'oklch(0.508 0.118 165.612)',
+    notes: {
+      title: 'Jade Mint — Fresh & Natural',
+      description: 'Deep jade/emerald green primary with monochromatic mint-to-forest chart palette. Larger radius (0.875rem) gives a softer, friendlier feel. Hue ~165 sits between teal and green — fresh without being neon.',
+      pros: ['Green = growth, success, money — perfect semantic fit for a ticketing/finance platform', 'Monochromatic mint-to-jade charts are easy to read and visually calming', 'Larger radius (0.875rem) softens the interface — more approachable', 'Distinct from both orange and blue options — a middle ground', 'Mint-tinted button text adds subtle personality'],
+      cons: ['Green primary can conflict with success states (both green)', 'Less energetic than orange — may not feel "event-like" enough', 'Could read as fintech/eco rather than nightlife/events']
+    },
+    dark: {
+      bg: 'oklch(0.145 0 0)',
+      fg: 'oklch(0.985 0 0)',
+      card: 'oklch(0.205 0 0)',
+      cardFg: 'oklch(0.985 0 0)',
+      primary: 'oklch(0.508 0.118 165.612)',
+      primaryFg: 'oklch(0.979 0.021 166.113)',
+      secondary: 'oklch(0.274 0.006 286.033)',
+      secondaryFg: 'oklch(0.985 0 0)',
+      muted: 'oklch(0.269 0 0)',
+      mutedFg: 'oklch(0.708 0 0)',
+      accent: 'oklch(0.269 0 0)',
+      accentFg: 'oklch(0.985 0 0)',
+      border: 'oklch(0.3 0 0)',
+      destructive: 'oklch(0.704 0.191 22.216)',
+      chart1: 'oklch(0.845 0.143 164.978)',
+      chart2: 'oklch(0.696 0.17 162.48)',
+      chart3: 'oklch(0.596 0.145 163.225)',
+      chart4: 'oklch(0.508 0.118 165.612)',
+      chart5: 'oklch(0.432 0.095 166.913)',
+    },
+    light: {
+      bg: 'oklch(1 0 0)',
+      fg: 'oklch(0.145 0 0)',
+      card: 'oklch(1 0 0)',
+      cardFg: 'oklch(0.145 0 0)',
+      primary: 'oklch(0.508 0.118 165.612)',
+      primaryFg: 'oklch(0.979 0.021 166.113)',
+      secondary: 'oklch(0.967 0.001 286.375)',
+      secondaryFg: 'oklch(0.21 0.006 285.885)',
+      muted: 'oklch(0.97 0 0)',
+      mutedFg: 'oklch(0.556 0 0)',
+      accent: 'oklch(0.97 0 0)',
+      accentFg: 'oklch(0.205 0 0)',
+      border: 'oklch(0.922 0 0)',
+      destructive: 'oklch(0.577 0.245 27.325)',
+      chart1: 'oklch(0.845 0.143 164.978)',
+      chart2: 'oklch(0.696 0.17 162.48)',
+      chart3: 'oklch(0.596 0.145 163.225)',
+      chart4: 'oklch(0.508 0.118 165.612)',
+      chart5: 'oklch(0.432 0.095 166.913)',
+    }
+  },
+  'steel-teal': {
+    name: 'Steel Teal',
+    dot: 'oklch(0.52 0.105 223.128)',
+    notes: {
+      title: 'Steel Teal — Cool & Trustworthy',
+      description: 'Deep teal/steel blue primary with monochromatic chart palette. Pure neutral backgrounds. Same structural approach as Deep Ember but in the cool spectrum — trustworthy, professional, calm.',
+      pros: ['Teal/steel blue is the most "trustworthy" color in UX research', 'Monochromatic chart palette — harmonious data visualization', 'Pure neutral backgrounds — content-first', 'Subtle cyan-tinted button text adds personality', 'Calming energy — great for data-dense dashboards'],
+      cons: ['Common in SaaS/fintech — less distinctive for events', 'Cool palette may feel too corporate for nightlife context', 'Less energetic than orange or green options']
+    },
+    dark: {
+      bg: 'oklch(0.145 0 0)',
+      fg: 'oklch(0.985 0 0)',
+      card: 'oklch(0.205 0 0)',
+      cardFg: 'oklch(0.985 0 0)',
+      primary: 'oklch(0.52 0.105 223.128)',
+      primaryFg: 'oklch(0.984 0.019 200.873)',
+      secondary: 'oklch(0.274 0.006 286.033)',
+      secondaryFg: 'oklch(0.985 0 0)',
+      muted: 'oklch(0.269 0 0)',
+      mutedFg: 'oklch(0.708 0 0)',
+      accent: 'oklch(0.269 0 0)',
+      accentFg: 'oklch(0.985 0 0)',
+      border: 'oklch(0.3 0 0)',
+      destructive: 'oklch(0.704 0.191 22.216)',
+      chart1: 'oklch(0.865 0.127 207.078)',
+      chart2: 'oklch(0.715 0.143 215.221)',
+      chart3: 'oklch(0.609 0.126 221.723)',
+      chart4: 'oklch(0.52 0.105 223.128)',
+      chart5: 'oklch(0.45 0.085 224.283)',
+    },
+    light: {
+      bg: 'oklch(1 0 0)',
+      fg: 'oklch(0.145 0 0)',
+      card: 'oklch(1 0 0)',
+      cardFg: 'oklch(0.145 0 0)',
+      primary: 'oklch(0.52 0.105 223.128)',
+      primaryFg: 'oklch(0.984 0.019 200.873)',
+      secondary: 'oklch(0.967 0.001 286.375)',
+      secondaryFg: 'oklch(0.21 0.006 285.885)',
+      muted: 'oklch(0.97 0 0)',
+      mutedFg: 'oklch(0.556 0 0)',
+      accent: 'oklch(0.97 0 0)',
+      accentFg: 'oklch(0.205 0 0)',
+      border: 'oklch(0.922 0 0)',
+      destructive: 'oklch(0.577 0.245 27.325)',
+      chart1: 'oklch(0.865 0.127 207.078)',
+      chart2: 'oklch(0.715 0.143 215.221)',
+      chart3: 'oklch(0.609 0.126 221.723)',
+      chart4: 'oklch(0.52 0.105 223.128)',
+      chart5: 'oklch(0.45 0.085 224.283)',
+    }
+  },
+  'deep-ember': {
+    name: 'Deep Ember',
+    dot: 'oklch(0.553 0.195 38.402)',
+    notes: {
+      title: 'Deep Ember — Rich & Monochromatic',
+      description: 'Deeper, richer orange than Burnt Copper. Pure neutral backgrounds (true black/white). All chart colors live in the orange/amber spectrum creating a cohesive monochromatic feel. The primary is darker and more saturated — feels more premium.',
+      pros: ['Richer, deeper primary — more premium than Burnt Copper', 'Monochromatic chart palette (amber→burnt orange→deep) creates visual harmony', 'Pure neutral backgrounds — zero color tint, maximum content focus', 'Cream-tinted primary-foreground adds warmth to buttons', 'Neutral secondary — lets the orange be the only hero color'],
+      cons: ['Monochromatic charts may be harder to distinguish at a glance', 'Darker primary in dark mode may lack pop on dark backgrounds', 'No contrasting secondary color — less visual variety']
+    },
+    dark: {
+      bg: 'oklch(0.145 0 0)',
+      fg: 'oklch(0.985 0 0)',
+      card: 'oklch(0.205 0 0)',
+      cardFg: 'oklch(0.985 0 0)',
+      primary: 'oklch(0.47 0.157 37.304)',
+      primaryFg: 'oklch(0.98 0.016 73.684)',
+      secondary: 'oklch(0.274 0.006 286.033)',
+      secondaryFg: 'oklch(0.985 0 0)',
+      muted: 'oklch(0.269 0 0)',
+      mutedFg: 'oklch(0.708 0 0)',
+      accent: 'oklch(0.269 0 0)',
+      accentFg: 'oklch(0.985 0 0)',
+      border: 'oklch(0.3 0 0)',
+      destructive: 'oklch(0.704 0.191 22.216)',
+      chart1: 'oklch(0.837 0.128 66.29)',
+      chart2: 'oklch(0.705 0.213 47.604)',
+      chart3: 'oklch(0.646 0.222 41.116)',
+      chart4: 'oklch(0.553 0.195 38.402)',
+      chart5: 'oklch(0.47 0.157 37.304)',
+    },
+    light: {
+      bg: 'oklch(1 0 0)',
+      fg: 'oklch(0.145 0 0)',
+      card: 'oklch(1 0 0)',
+      cardFg: 'oklch(0.145 0 0)',
+      primary: 'oklch(0.553 0.195 38.402)',
+      primaryFg: 'oklch(0.98 0.016 73.684)',
+      secondary: 'oklch(0.967 0.001 286.375)',
+      secondaryFg: 'oklch(0.21 0.006 285.885)',
+      muted: 'oklch(0.97 0 0)',
+      mutedFg: 'oklch(0.556 0 0)',
+      accent: 'oklch(0.97 0 0)',
+      accentFg: 'oklch(0.205 0 0)',
+      border: 'oklch(0.922 0 0)',
+      destructive: 'oklch(0.577 0.245 27.325)',
+      chart1: 'oklch(0.837 0.128 66.29)',
+      chart2: 'oklch(0.705 0.213 47.604)',
+      chart3: 'oklch(0.646 0.222 41.116)',
+      chart4: 'oklch(0.553 0.195 38.402)',
+      chart5: 'oklch(0.47 0.157 37.304)',
+    }
+  },
+  'arcade-duo': {
+    name: 'Arcade Duo (Green + Purple)',
+    dot: 'linear-gradient(135deg, oklch(0.8500 0.1900 130.0000), oklch(0.6800 0.2000 280.0000))',
+    notes: {
+      title: 'Arcade Duo — Best of Both Worlds',
+      description: 'Combines the lime green primary with purple as a strong secondary/accent. The green is for CTAs and key actions; purple adds depth and variety in charts, badges, and secondary elements. This is the "have your cake and eat it too" option.',
+      pros: ['Keeps the distinctive lime green you liked', 'Purple adds premium depth and hierarchy', 'Excellent chart color variety (green + purple spectrum)', 'Strong nightlife association from both colors', 'Most distinctive option — unlikely to look like any competitor'],
+      cons: ['Two strong colors need careful balance', 'Requires discipline — can look busy if overused', 'Slightly more complex design system']
+    },
+    dark: {
+      bg: 'oklch(0.1300 0.0350 270.0000)',
+      fg: 'oklch(0.9600 0.0050 260.0000)',
+      card: 'oklch(0.1900 0.0380 270.0000)',
+      cardFg: 'oklch(0.9600 0.0050 260.0000)',
+      primary: 'oklch(0.8500 0.1900 130.0000)',
+      primaryFg: 'oklch(0.0800 0.0200 130.0000)',
+      secondary: 'oklch(0.5500 0.1800 280.0000)',
+      secondaryFg: 'oklch(0.9500 0.0100 280.0000)',
+      muted: 'oklch(0.2500 0.0350 272.0000)',
+      mutedFg: 'oklch(0.6500 0.0350 268.0000)',
+      accent: 'oklch(0.3800 0.1200 280.0000)',
+      accentFg: 'oklch(0.8000 0.1600 280.0000)',
+      border: 'oklch(0.2600 0.0350 272.0000)',
+      destructive: 'oklch(0.4800 0.1700 25.0000)',
+      chart1: 'oklch(0.8500 0.1900 130.0000)',
+      chart2: 'oklch(0.6800 0.2000 280.0000)',
+      chart3: 'oklch(0.7500 0.1600 160.0000)',
+      chart4: 'oklch(0.7200 0.1500 310.0000)',
+      chart5: 'oklch(0.7800 0.1400 70.0000)',
+    },
+    light: {
+      bg: 'oklch(0.9800 0.0050 270.0000)',
+      fg: 'oklch(0.1900 0.0380 270.0000)',
+      card: 'oklch(1.0000 0 0)',
+      cardFg: 'oklch(0.1900 0.0380 270.0000)',
+      primary: 'oklch(0.7500 0.1700 132.0000)',
+      primaryFg: 'oklch(0.0800 0.0200 130.0000)',
+      secondary: 'oklch(0.4800 0.1600 280.0000)',
+      secondaryFg: 'oklch(0.9800 0.0050 280.0000)',
+      muted: 'oklch(0.9500 0.0060 270.0000)',
+      mutedFg: 'oklch(0.5000 0.0350 270.0000)',
+      accent: 'oklch(0.9400 0.0250 280.0000)',
+      accentFg: 'oklch(0.4500 0.1400 280.0000)',
+      border: 'oklch(0.9100 0.0080 270.0000)',
+      destructive: 'oklch(0.6200 0.2000 25.0000)',
+      chart1: 'oklch(0.7500 0.1700 132.0000)',
+      chart2: 'oklch(0.5500 0.1800 280.0000)',
+      chart3: 'oklch(0.6500 0.1400 160.0000)',
+      chart4: 'oklch(0.6200 0.1300 310.0000)',
+      chart5: 'oklch(0.6800 0.1200 70.0000)',
+    }
+  }
+};
+
+let currentTheme = 'retro-arcade';
+let currentMode = 'dark';
+
+// ============ RENDER THEME SWITCHER ============
+function renderSwitcher() {
+  const container = document.getElementById('themeSwitcher');
+  container.innerHTML = '';
+  for (const [key, theme] of Object.entries(themes)) {
+    const btn = document.createElement('button');
+    btn.className = `theme-btn ${key === currentTheme ? 'active' : ''}`;
+    btn.onclick = () => setTheme(key);
+    const dot = document.createElement('span');
+    dot.className = 'theme-dot';
+    dot.style.background = theme.dot;
+    btn.appendChild(dot);
+    btn.appendChild(document.createTextNode(theme.name));
+    container.appendChild(btn);
+  }
+}
+
+// ============ APPLY THEME ============
+function applyTheme() {
+  const theme = themes[currentTheme];
+  const colors = theme[currentMode];
+
+  // Set CSS custom properties for active theme
+  document.documentElement.style.setProperty('--th-primary', colors.primary);
+  document.documentElement.style.setProperty('--th-border', colors.border);
+
+  // Switch font family based on theme
+  const fontFamily = theme.fontFamily || "'Inter', system-ui, sans-serif";
+  document.getElementById('dashboardDemo').style.fontFamily = fontFamily;
+  document.getElementById('buyerFlow').style.fontFamily = fontFamily;
+
+  // Dashboard
+  const dashboard = document.getElementById('dashboardDemo');
+  dashboard.style.background = colors.bg;
+  dashboard.style.color = colors.fg;
+
+  const sidebar = document.getElementById('dashSidebar');
+  sidebar.style.background = colors.card;
+  sidebar.style.borderColor = colors.border;
+
+  const logoIcon = document.getElementById('logoIcon');
+  logoIcon.style.background = colors.primary;
+  logoIcon.style.color = colors.primaryFg;
+
+  const navActive = document.getElementById('navDashboard');
+  navActive.style.background = colors.accent;
+  navActive.style.color = colors.accentFg;
+
+  const dashContent = document.getElementById('dashContent');
+  dashContent.style.background = colors.bg;
+  dashContent.style.color = colors.fg;
+
+  // KPI Cards
+  ['kpi1','kpi2','kpi3','kpi4'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.background = colors.card;
+    el.style.borderColor = colors.border;
+    el.style.color = colors.cardFg;
+  });
+  ['kpiLabel1','kpiLabel2','kpiLabel3','kpiLabel4'].forEach(id => {
+    document.getElementById(id).style.color = colors.mutedFg;
+  });
+
+  // Buttons
+  const btnNew = document.getElementById('btnNew');
+  btnNew.style.background = colors.primary;
+  btnNew.style.color = colors.primaryFg;
+  const btnFilter = document.getElementById('btnFilter');
+  btnFilter.style.background = 'transparent';
+  btnFilter.style.borderColor = colors.border;
+  btnFilter.style.color = colors.mutedFg;
+
+  // Charts
+  ['chartMain','chartSide'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.background = colors.card;
+    el.style.borderColor = colors.border;
+    el.style.color = colors.cardFg;
+  });
+
+  // Chart bars
+  const barsContainer = document.getElementById('chartBars');
+  barsContainer.innerHTML = '';
+  const heights = [40, 55, 35, 70, 85, 60, 75, 90, 65, 80, 50, 95];
+  heights.forEach((h, i) => {
+    const bar = document.createElement('div');
+    bar.className = 'chart-bar';
+    bar.style.height = h + '%';
+    bar.style.background = i === heights.length - 1 ? colors.primary : colors.chart2;
+    bar.style.opacity = i === heights.length - 1 ? '1' : '0.6';
+    barsContainer.appendChild(bar);
+  });
+
+  // RRPP list
+  const rrpp = document.getElementById('rrppList');
+  const rrppData = [
+    { name: 'Lucas M.', val: '847', pct: 90 },
+    { name: 'Sofia R.', val: '623', pct: 66 },
+    { name: 'Diego P.', val: '412', pct: 44 },
+    { name: 'Vale T.', val: '285', pct: 30 },
+  ];
+  rrpp.innerHTML = rrppData.map(r => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <span style="flex:1;color:${colors.fg}">${r.name}</span>
+      <div style="flex:2;height:6px;background:${colors.muted};border-radius:3px;overflow:hidden">
+        <div style="width:${r.pct}%;height:100%;background:${colors.primary};border-radius:3px"></div>
+      </div>
+      <span style="color:${colors.mutedFg};font-family:var(--font-mono);font-size:0.72rem;min-width:36px;text-align:right">${r.val}</span>
+    </div>
+  `).join('');
+
+  // Table
+  const tableCard = document.getElementById('tableCard');
+  tableCard.style.background = colors.card;
+  tableCard.style.borderColor = colors.border;
+  tableCard.style.color = colors.cardFg;
+
+  const tableHeader = document.getElementById('tableHeader');
+  tableHeader.style.borderColor = colors.border;
+  tableHeader.style.color = colors.mutedFg;
+
+  ['tableRow1','tableRow2','tableRow3'].forEach(id => {
+    document.getElementById(id).style.borderColor = colors.border;
+    document.getElementById(id).style.color = colors.cardFg;
+  });
+
+  // Badges
+  const badge1 = document.getElementById('badge1');
+  badge1.style.background = colors.accent;
+  badge1.style.color = colors.accentFg;
+  const badge2 = document.getElementById('badge2');
+  badge2.style.background = colors.accent;
+  badge2.style.color = colors.accentFg;
+  const badge3 = document.getElementById('badge3');
+  badge3.style.background = colors.secondary;
+  badge3.style.color = colors.secondaryFg;
+
+  // ============ BUYER FLOW ============
+  const buyerBg = document.getElementById('buyerBg');
+  buyerBg.style.background = colors.bg;
+  const buyerFlow = document.getElementById('buyerFlow');
+  buyerFlow.style.color = colors.fg;
+
+  document.getElementById('buyerLogo').style.color = colors.fg;
+  document.getElementById('buyerEventName').style.color = colors.mutedFg;
+
+  const eventHero = document.getElementById('eventHero');
+  eventHero.style.background = `linear-gradient(135deg, ${colors.secondary}, ${colors.muted})`;
+
+  ['ticket1','ticket2','ticket3'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.style.background = colors.card;
+    el.style.borderColor = i === 0 ? colors.primary : colors.border;
+    el.style.color = colors.cardFg;
+  });
+  ['ticketDesc1','ticketDesc2','ticketDesc3'].forEach(id => {
+    document.getElementById(id).style.color = colors.mutedFg;
+  });
+
+  ['qtyBtn1','qtyBtn2'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.background = colors.secondary;
+    el.style.color = colors.secondaryFg;
+    el.style.borderColor = colors.border;
+  });
+
+  document.getElementById('buyerTotal').style.borderColor = colors.border;
+
+  const buyerCta = document.getElementById('buyerCta');
+  buyerCta.style.background = colors.primary;
+  buyerCta.style.color = colors.primaryFg;
+
+  // ============ PALETTE GRID ============
+  const paletteGrid = document.getElementById('paletteGrid');
+  const swatches = [
+    { label: 'Primary', color: colors.primary, fg: colors.primaryFg },
+    { label: 'Secondary', color: colors.secondary, fg: colors.secondaryFg },
+    { label: 'Accent', color: colors.accent, fg: colors.accentFg },
+    { label: 'Background', color: colors.bg, fg: colors.fg },
+    { label: 'Card', color: colors.card, fg: colors.cardFg },
+    { label: 'Muted', color: colors.muted, fg: colors.mutedFg },
+    { label: 'Border', color: colors.border, fg: colors.fg },
+    { label: 'Destructive', color: colors.destructive, fg: '#fff' },
+    { label: 'Chart 1', color: colors.chart1, fg: colors.primaryFg },
+    { label: 'Chart 2', color: colors.chart2, fg: '#fff' },
+    { label: 'Chart 3', color: colors.chart3, fg: '#000' },
+    { label: 'Chart 4', color: colors.chart4, fg: '#fff' },
+  ];
+  paletteGrid.innerHTML = swatches.map(s => `
+    <div class="color-swatch">
+      <div class="swatch-color" style="background:${s.color};color:${s.fg}">Aa</div>
+      <div class="swatch-label">${s.label}</div>
+    </div>
+  `).join('');
+
+  // ============ THEME NOTES ============
+  const notesDiv = document.getElementById('themeNotes');
+  const notes = theme.notes;
+  notesDiv.innerHTML = `
+    <h4>${notes.title}</h4>
+    <p style="margin-bottom:12px">${notes.description}</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <p style="font-weight:600;color:rgba(255,255,255,0.8);margin-bottom:4px">✓ Strengths</p>
+        <ul>${notes.pros.map(p => `<li>${p}</li>`).join('')}</ul>
+      </div>
+      <div>
+        <p style="font-weight:600;color:rgba(255,255,255,0.8);margin-bottom:4px">⚠ Considerations</p>
+        <ul>${notes.cons.map(c => `<li>${c}</li>`).join('')}</ul>
+      </div>
+    </div>
+  `;
+
+  // Update switcher active state
+  renderSwitcher();
+
+  // Update mode toggle
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.toLowerCase().includes(currentMode));
+  });
+}
+
+function setTheme(key) {
+  currentTheme = key;
+  applyTheme();
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  applyTheme();
+}
+
+// ============ INIT ============
+renderSwitcher();
+applyTheme();
+</script>
+
+</body>
+</html>

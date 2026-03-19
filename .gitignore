@@ -1,0 +1,25 @@
+# Dependencies (future)
+node_modules/
+.next/
+out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Supabase local (future)
+supabase/.temp/
+
+# Large reference files (not project source)
+ideawebiste.html
+image.png
+image copy.png
