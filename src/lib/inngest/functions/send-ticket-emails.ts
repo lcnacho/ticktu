@@ -3,8 +3,14 @@ import { db } from "@/lib/db/index";
 import { orders } from "@/lib/db/schema/orders";
 import { orderItems } from "@/lib/db/schema/order-items";
 import { tickets } from "@/lib/db/schema/tickets";
-import { eq, and } from "drizzle-orm";
+import { events } from "@/lib/db/schema/events";
+import { producers } from "@/lib/db/schema/producers";
+import { ticketTypes } from "@/lib/db/schema/ticket-types";
+import { eq, and, inArray } from "drizzle-orm";
 import { generateQrPayload } from "@/lib/qr/generate";
+import { Resend } from "resend";
+import { TicketEmail } from "@/lib/email/ticket-email";
+import { formatDateTime } from "@/lib/utils/dates";
 
 export const sendTicketEmails = inngestClient.createFunction(
   { id: "send-ticket-emails", retries: 3 },
@@ -82,10 +88,62 @@ export const sendTicketEmails = inngestClient.createFunction(
       return ticketRecords;
     });
 
-    // Step 3: Send email via Resend
+    // Step 3: Fetch event, producer, and ticket type data for email
+    const emailContext = await step.run("fetch-email-context", async () => {
+      const [event] = await db
+        .select()
+        .from(events)
+        .where(and(eq(events.tenantId, tenantId), eq(events.id, order.eventId)))
+        .limit(1);
+      const [producer] = await db
+        .select()
+        .from(producers)
+        .where(and(eq(producers.tenantId, tenantId), eq(producers.isActive, true)))
+        .limit(1);
+      const typeIds = [...new Set(items.map((i: { ticketTypeId: string }) => i.ticketTypeId))];
+      const types = typeIds.length > 0
+        ? await db
+            .select()
+            .from(ticketTypes)
+            .where(inArray(ticketTypes.id, typeIds as string[]))
+        : [];
+      return { event, producer, types };
+    });
+
+    // Step 4: Send email via Resend
     await step.run("send-email", async () => {
-      // TODO: Implement react-email template and Resend delivery
-      // For now, mark email as sent on the order
+      if (!emailContext.event || !emailContext.producer) {
+        await db
+          .update(orders)
+          .set({ emailStatus: "failed", updatedAt: new Date() })
+          .where(eq(orders.id, orderId));
+        return;
+      }
+
+      const { event, producer, types } = emailContext;
+      const typeMap = new Map(types.map((t: { id: string; name: string }) => [t.id, t.name]));
+
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      await resend.emails.send({
+        from: `${producer.name} <noreply@${process.env.RESEND_DOMAIN || "ticktu.com"}>`,
+        to: order.buyerEmail,
+        subject: `Tus entradas para ${event.name}`,
+        react: TicketEmail({
+          eventName: event.name,
+          eventDate: formatDateTime(event.date),
+          eventVenue: event.venue,
+          buyerName: order.buyerName,
+          producerName: producer.name,
+          producerLogoUrl: producer.logoUrl,
+          primaryColor: producer.primaryColor,
+          tickets: createdTickets.map((t: { holderName: string; ticketTypeId: string; qrCode: string }) => ({
+            holderName: t.holderName,
+            ticketTypeName: typeMap.get(t.ticketTypeId) || "Entrada",
+            qrCode: t.qrCode,
+          })),
+        }),
+      });
+
       await db
         .update(orders)
         .set({ emailStatus: "sent", updatedAt: new Date() })
