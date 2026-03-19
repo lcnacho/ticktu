@@ -205,6 +205,72 @@ export async function updateEventAction(
   return { success: true, data: { id: eventId } };
 }
 
+// Event cancellation (Story 8.2)
+
+export async function cancelEventAction(
+  eventId: string,
+): Promise<ActionResult<{ id: string }>> {
+  // 1. Auth
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return {
+      success: false,
+      error: createAppError("UNAUTHORIZED", "Not authenticated", 401),
+    };
+  }
+
+  // 2. Authorize
+  const tenantId = user.app_metadata?.tenant_id;
+  if (!tenantId) {
+    return {
+      success: false,
+      error: createAppError("FORBIDDEN", "No tenant access", 403),
+    };
+  }
+
+  const event = await getEventById(tenantId, eventId);
+  if (!event) {
+    return {
+      success: false,
+      error: createAppError("NOT_FOUND", "Event not found", 404),
+    };
+  }
+
+  // 3. Validate
+  if (!["published", "finished"].includes(event.status)) {
+    return {
+      success: false,
+      error: createAppError(
+        "INVALID_STATE_TRANSITION",
+        "Solo se pueden cancelar eventos publicados o finalizados",
+        400,
+      ),
+    };
+  }
+
+  // 4. Execute
+  await updateEventQuery(tenantId, eventId, { status: "cancelled" });
+
+  // 5. After — dispatch Inngest event for refund processing
+  after(async () => {
+    const { inngestClient } = await import("@/lib/inngest/client");
+    await inngestClient.send({
+      name: "event/cancelled",
+      data: { eventId, tenantId },
+    });
+    const producer = await getProducerByTenantId(tenantId);
+    if (producer) {
+      revalidateTag(`tenant-${producer.slug}`, "default");
+      revalidateTag(`event-${eventId}`, "default");
+    }
+  });
+
+  return { success: true, data: { id: eventId } };
+}
+
 // Lifecycle transitions (Story 2.5)
 
 export async function publishEventAction(

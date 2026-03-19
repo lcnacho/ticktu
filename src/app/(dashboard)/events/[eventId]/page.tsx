@@ -2,11 +2,21 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getEventById } from "@/lib/db/queries/events";
+import { getProducerByTenantId } from "@/lib/db/queries/producers";
+import { getTicketTypesByEvent } from "@/lib/db/queries/ticket-types";
+import { getBatchesByTicketType } from "@/lib/db/queries/batches";
+import {
+  getComplimentaryTickets,
+  getComplimentaryCountByType,
+} from "@/lib/db/queries/tickets";
 import type { Event, EventStatus } from "@/lib/db/schema/events";
+import type { Batch } from "@/lib/db/schema/batches";
 import { EventStatusBadge } from "@/components/dashboard/event-status-badge";
 import { EventActions } from "@/components/dashboard/event-actions";
 import { EventEditForm } from "@/components/dashboard/event-edit-form";
 import { EventListSkeleton } from "@/components/dashboard/event-list-skeleton";
+import { TicketTypeList } from "@/components/dashboard/ticket-type-list";
+import { CortesiasTab } from "@/components/dashboard/cortesias-tab";
 import { formatDateTime } from "@/lib/utils/dates";
 
 type Tab = {
@@ -20,7 +30,7 @@ const TABS: Tab[] = [
   { key: "configuracion", label: "Configuracion", enabled: true },
   { key: "ventas", label: "Ventas", enabled: false },
   { key: "rrpp", label: "RRPP", enabled: false },
-  { key: "cortesias", label: "Cortesias", enabled: false },
+  { key: "cortesias", label: "Cortesias", enabled: true },
   { key: "checkins", label: "Check-ins", enabled: false },
   { key: "finanzas", label: "Finanzas", enabled: false },
 ];
@@ -53,6 +63,26 @@ async function EventDetailContent({
   if (!event) {
     notFound();
   }
+
+  const producer = await getProducerByTenantId(tenantId);
+  const currency = producer?.currency ?? "UYU";
+  const feePercentage = producer?.feePercentage ?? 5;
+  const feeFixed = producer?.feeFixed ?? 0;
+
+  // Load ticket types for configuracion and cortesias tabs
+  const allTicketTypes = await getTicketTypesByEvent(tenantId, eventId);
+
+  // Load batches for each ticket type
+  const batchesByType: Record<string, Batch[]> = {};
+  await Promise.all(
+    allTicketTypes.map(async (tt) => {
+      batchesByType[tt.id] = await getBatchesByTicketType(tenantId, tt.id);
+    }),
+  );
+
+  // Load cortesias data
+  const complimentaryTickets = await getComplimentaryTickets(tenantId, eventId);
+  const countByType = await getComplimentaryCountByType(tenantId, eventId);
 
   return (
     <>
@@ -103,20 +133,40 @@ async function EventDetailContent({
       {currentTab === "general" && <EventGeneralTab event={event} />}
 
       {currentTab === "configuracion" && (
-        <EventEditForm
+        <div className="space-y-8">
+          <EventEditForm
+            eventId={event.id}
+            defaultValues={{
+              name: event.name,
+              slug: event.slug,
+              date: event.date.toISOString().slice(0, 16),
+              venue: event.venue,
+              description: event.description ?? "",
+              imageUrl: event.imageUrl ?? "",
+            }}
+          />
+          <hr />
+          <TicketTypeList
+            eventId={event.id}
+            ticketTypes={allTicketTypes}
+            batchesByType={batchesByType}
+            currency={currency}
+            feePercentage={feePercentage}
+            feeFixed={feeFixed}
+          />
+        </div>
+      )}
+
+      {currentTab === "cortesias" && (
+        <CortesiasTab
           eventId={event.id}
-          defaultValues={{
-            name: event.name,
-            slug: event.slug,
-            date: event.date.toISOString().slice(0, 16),
-            venue: event.venue,
-            description: event.description ?? "",
-            imageUrl: event.imageUrl ?? "",
-          }}
+          tickets={complimentaryTickets}
+          ticketTypes={allTicketTypes}
+          countByType={countByType}
         />
       )}
 
-      {!["general", "configuracion"].includes(currentTab) && (
+      {!["general", "configuracion", "cortesias"].includes(currentTab) && (
         <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
           <p className="text-sm text-gray-400">
             Esta seccion estara disponible proximamente.
