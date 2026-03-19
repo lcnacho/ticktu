@@ -23,7 +23,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 ### Requirements Overview
 
 **Functional Requirements:**
-36 FRs across 8 domains: Tenant Management (4), Event Lifecycle (6), Ticketing & Pricing (5), Purchase & Payment (7), Attribution & RRPP (3), Analytics & Reporting (4), Validation & Offline (6), Admin & Support (3). The system covers the complete event lifecycle from producer onboarding to post-event settlement.
+39 FRs across 8 domains: Tenant Management (4), Event Lifecycle (6), Ticketing & Pricing (5), Purchase & Payment (8 — FR-PU-08 removed, gap preserved), Attribution & RRPP (3), Analytics & Reporting (4), Validation & Offline (6), Admin & Support (3). The system covers the complete event lifecycle from producer onboarding to post-event settlement.
 
 **Non-Functional Requirements:**
 20 NFRs across Performance (4), Availability (3), Scalability (3), Security (4), Data Integrity (4), Email Deliverability (2). The most architecturally demanding are: multi-tenant isolation at every layer, offline validation with 100% sync integrity, 99.9% uptime during sales windows, and 500 concurrent buyers capacity.
@@ -66,6 +66,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
    - **Sync on reconnect:** Queue-based, first-scan-wins business rule (not last-write-wins)
    - **Known limitation:** Tickets purchased during offline window won't validate until reconnect — acceptable trade-off for fallback mode
    - **Conflict resolution:** First device to sync a scan wins; second device's scan flagged on sync
+   - **Dual-device offline scenario:** Two operators offline scan the same ticket → both see "valid" locally (no way to prevent without connectivity). On reconnect, first device to sync wins; second device's scan is marked as `conflict` with reason `duplicate_offline_scan`. The operator sees an info message explaining the duplicate was already admitted. This is an **accepted limitation** of offline fallback mode — documented for event producers.
    - **Testability concern:** Sync and conflict logic must be in pure functions testable independently of Service Worker/browser context
 
 6. **Real-Time Data** — Dashboard polling every 30s, in-place updates without flicker, live sales and check-in monitoring
@@ -122,6 +123,7 @@ npm install @supabase/supabase-js @supabase/ssr
 npm install drizzle-orm postgres
 npm install -D drizzle-kit
 npm install @serwist/next
+npm install inngest
 ```
 
 ### Architectural Decisions Provided by Stack
@@ -129,7 +131,7 @@ npm install @serwist/next
 **Language & Runtime:**
 - TypeScript (strict mode) across entire codebase
 - Next.js 16 with App Router + Turbopack (default bundler)
-- React 19
+- React 19.2 (View Transitions, `useEffectEvent()`, `<Activity/>`)
 
 **UI & Styling:**
 - Tailwind CSS for utility-first styling
@@ -164,7 +166,7 @@ npm install @serwist/next
 - Supabase local dev (`supabase start`) for real database testing
 
 **Infrastructure & Deployment:**
-- **Vercel** — Next.js app hosting (edge middleware for subdomain routing, preview deploys)
+- **Vercel** — Next.js app hosting (proxy for subdomain routing, preview deploys)
 - **Supabase** — PostgreSQL + Auth + Storage + RLS
 - **Cloudflare** — DNS + proxy + DDoS protection + WAF + wildcard SSL for `*.ticktu.com`
 
@@ -173,7 +175,7 @@ npm install @serwist/next
 | Layer | Provider | Protection |
 |-------|----------|------------|
 | DNS + CDN + WAF | Cloudflare (free tier) | DDoS absorption, basic WAF rules (SQL injection, XSS), bot protection, wildcard SSL |
-| Application hosting | Vercel | Edge middleware, SSL termination, rate limiting via middleware |
+| Application hosting | Vercel | Proxy (Node.js runtime), SSL termination, rate limiting via proxy |
 | Database | Supabase | RLS policies, connection pooling, encrypted at rest |
 | Payments | MercadoPago | PCI compliance fully delegated — Ticktu never touches card data |
 
@@ -194,8 +196,8 @@ npm install @serwist/next
 **Critical Decisions (Block Implementation):**
 - Tenant isolation pattern (RLS + app-level)
 - API pattern (Server Actions + Route Handlers)
-- Email pipeline architecture (Resend + waitUntil)
-- Producer landing rendering strategy (ISR)
+- Email pipeline architecture (Resend + Inngest)
+- Producer landing rendering strategy (Cache Components + "use cache")
 - Error handling standard (typed AppError)
 - Folder structure and route organization
 
@@ -203,13 +205,12 @@ npm install @serwist/next
 - Caching strategy per data type
 - Background job pattern
 - State management approach
-- Middleware architecture
+- Proxy architecture (`proxy.ts`)
 - CI/CD pipeline
 
 **Deferred Decisions (Post-MVP):**
 - Redis/external cache (only if performance demands)
 - WebSocket real-time (upgrade from 30s polling)
-- Inngest job queue (upgrade from waitUntil if retries needed)
 - Stripe as additional payment provider
 - TanStack Query/SWR for client-side data management
 
@@ -223,11 +224,18 @@ Both Postgres RLS and app-level middleware enforce tenant isolation. RLS policie
 
 | Data | Cache | TTL | Invalidation |
 |------|-------|-----|-------------|
-| Producer branding (logo, colors) | Cloudflare edge + Next.js fetch cache | 1 hour | On-demand via `revalidateTag()` when Ticktu team updates branding |
-| Event page (details, images) | ISR at Vercel edge | 5 min baseline | On-demand via `revalidateTag()` on publish/update |
+| Producer branding (logo, colors) | Cloudflare edge + `"use cache"` | 1 hour | On-demand via `revalidateTag('tenant-{slug}', 'max')` when Ticktu team updates branding |
+| Event page (details, images) | Cache Components (`"use cache"`) | Cached until invalidated | On-demand via `updateTag('event-{id}')` on publish/update (read-your-writes in Server Actions) |
 | Ticket availability | **No cache** | N/A | Always fresh — client component fetches on mount |
 | Dashboard data | No cache | N/A | 30s polling from client |
-| Producer landing page | ISR at Vercel edge | 5 min baseline | On-demand via `revalidateTag()` on event publish/branding change |
+| Producer landing page | Cache Components (`"use cache"`) | Cached until invalidated | On-demand via `revalidateTag('tenant-{slug}', 'max')` on event publish/branding change |
+
+**Next.js 16 Caching Model:**
+- Caching is **opt-in** via `"use cache"` directive — all code is dynamic by default
+- Requires `cacheComponents: true` in `next.config.ts`
+- `revalidateTag(tag, profile)` — SWR behavior, requires `cacheLife` profile as 2nd argument (use `'max'` for most cases)
+- `updateTag(tag)` — Server Actions only, read-your-writes semantics (user sees changes immediately)
+- `refresh()` — Server Actions only, refreshes uncached data elsewhere on the page
 
 **Email Service: Resend**
 - Modern DX, built for Next.js ecosystem
@@ -253,15 +261,24 @@ Both Postgres RLS and app-level middleware enforce tenant isolation. RLS policie
 | Validation App | Event access code (no Supabase auth) | Single event, read + scan only |
 | Buyer | No auth required (guest checkout) | Public event pages + purchase flow |
 
-**Security Middleware (Single File):**
+**Security Proxy (Single File — `proxy.ts`):**
+
+In Next.js 16, `middleware.ts` is deprecated and replaced by `proxy.ts`. The proxy runs on **Node.js runtime** (not Edge), providing full Node.js API access for request interception.
+
 ```
-middleware.ts runs on every request at the edge:
+proxy.ts runs on every request (Node.js runtime):
 1. Resolve subdomain → determine surface (buyer/dashboard/admin/validation)
 2. Buyer surface → resolve tenant from subdomain → inject tenant context (no auth)
 3. Dashboard → check Supabase auth → verify user belongs to tenant via JWT tenant_id
 4. Admin → check Supabase auth → verify super_admin role
 5. Validation → pass through (auth via event code at app level)
 ```
+
+**Local Development — Subdomain Routing:**
+Subdomains like `producer.localhost` don't resolve by default. Options:
+- Add entries to `/etc/hosts`: `127.0.0.1 producer.localhost admin.localhost`
+- Use `nip.io`: `producer.127.0.0.1.nip.io` (zero config, resolves automatically)
+- Document chosen approach in `.env.example` for developer onboarding
 
 ### API & Communication Patterns
 
@@ -289,15 +306,23 @@ type AppError = {
 - Route Handlers return HTTP status codes + AppError body
 - Frontend `handleError()` maps error codes to UX spec's 4-level feedback model (toast, inline, dialog, environmental)
 
-**Background Jobs (Email Pipeline):**
+**Background Jobs (Email Pipeline — Inngest):**
 
-MVP: Vercel `waitUntil()` pattern — fire and forget within the same codebase:
+Inngest from day one — reliable delivery with retries, observability, and zero risk of lost emails:
 1. MercadoPago webhook hits Route Handler
 2. Handler validates payment → creates order in DB
-3. `waitUntil(sendTicketEmails(orderId))` — non-blocking
-4. Job generates QR codes → renders react-email template → sends via Resend
+3. `await inngest.send({ name: "order/completed", data: { orderId } })` — event dispatched
+4. Inngest function picks up event → generates QR codes → renders react-email template → sends via Resend
+5. If any step fails, Inngest retries automatically (3 retries by default)
 
-Upgrade path: Inngest for retries, step functions, and observability if needed post-MVP.
+**Why not `waitUntil()`:** If Vercel cancels the function before email sends, the buyer pays and receives nothing. Inngest guarantees delivery with retries and provides a dashboard to monitor failures during live events.
+
+**Inngest Setup:**
+- `lib/inngest/client.ts` — Inngest client initialization
+- `lib/inngest/functions/` — Job definitions (one file per job)
+- `app/api/inngest/route.ts` — Inngest serve endpoint (registers all functions)
+- Free tier: 5,000 runs/month (sufficient for MVP)
+- Test mode runs functions synchronously — zero CI friction
 
 ### Frontend Architecture
 
@@ -312,19 +337,18 @@ Upgrade path: Inngest for retries, step functions, and observability if needed p
 
 No Redux, Zustand, or TanStack Query for MVP. Add only if complexity demands it.
 
-**Producer Landing Page Architecture: ISR with On-Demand Revalidation**
+**Producer Landing Page Architecture: Cache Components with On-Demand Invalidation**
 
 Rendering strategy for buyer-facing pages (`{producer}.ticktu.com`):
 
-- **ISR (Incremental Static Regeneration)** — pages cached at Vercel/Cloudflare edge
-- **Baseline revalidation:** 5 minutes (safety net)
-- **On-demand revalidation:** `revalidateTag('tenant-{slug}')` called immediately on event publish, branding update, or batch status change
-- **Zero delay for producers:** Publish event → cache busted instantly → next visitor gets fresh page
+- **Cache Components (`"use cache"`)** — pages explicitly cached at Vercel/Cloudflare edge
+- **On-demand invalidation:** `updateTag('tenant-{slug}')` in Server Actions for read-your-writes (producer sees changes immediately); `revalidateTag('tenant-{slug}', 'max')` for SWR behavior on external triggers
+- **Zero delay for producers:** Publish event → `updateTag()` expires cache instantly → producer sees fresh page
 - **Ticket availability:** Rendered as client component that fetches fresh data on mount (not cached with the page)
-- **Deep links from social media:** ISR pages load from edge in <500ms — critical for Instagram/TikTok conversion
+- **Deep links from social media:** Cached pages load from edge in <500ms — critical for Instagram/TikTok conversion
 
 **Page structure (hybrid cached + dynamic):**
-- ISR-cached: producer branding, event details, images, SEO meta tags, OG tags
+- Cached via `"use cache"`: producer branding, event details, images, SEO meta tags, OG tags
 - Client-fetched on mount: ticket availability, prices, "sold out" badges
 
 **Landing Template Configuration (Level 2 Customization):**
@@ -347,14 +371,14 @@ Single template with toggleable blocks per producer. Configuration stored in `pr
 ```
 src/
   app/
-    (buyer)/              # Buyer-facing routes (producer branded, ISR)
+    (buyer)/              # Buyer-facing routes (producer branded, Cache Components)
     (dashboard)/          # Producer dashboard routes
     (admin)/              # Ticktu admin routes
     (validation)/         # Validation app routes (PWA)
     api/
       webhooks/           # MercadoPago IPN, etc.
       validation/         # Scan endpoint for PWA
-      jobs/               # Background job endpoints
+      inngest/            # Inngest serve endpoint
   components/
     ui/                   # shadcn components
     buyer/                # Buyer-specific components
@@ -366,6 +390,7 @@ src/
     db/                   # Drizzle schema + queries + migrations
     payments/             # MercadoPago abstraction layer
     email/                # Resend + react-email templates
+    inngest/              # Inngest client + job functions
     qr/                   # QR generation + validation logic
     validation/           # Offline sync logic (pure functions)
     errors/               # AppError types + handleError()
@@ -394,18 +419,19 @@ Route groups `(buyer)`, `(dashboard)`, `(admin)`, `(validation)` provide separat
 | Vercel Analytics | Page performance, function invocations | Free tier |
 | Supabase Dashboard | DB metrics, auth logs, storage usage | Included |
 | Resend Dashboard | Email delivery rates, bounces | Included |
+| Inngest Dashboard | Background job status, retries, failures | Free tier (5K runs/month) |
 | Sentry | Error tracking + alerting | Free tier (5K events/month) |
 
-Sentry is the one extra addition — critical for catching payment webhook failures or email delivery issues during live events.
+Inngest dashboard is critical for monitoring email delivery during live events — see which jobs failed, why, and whether retries succeeded. Sentry catches everything else.
 
 ### Decision Impact Analysis
 
 **Implementation Sequence:**
 1. Project initialization (create-next-app + shadcn + Supabase + Drizzle)
-2. Multi-tenancy foundation (middleware + RLS policies + subdomain routing)
+2. Multi-tenancy foundation (proxy.ts + RLS policies + subdomain routing)
 3. Auth system (Supabase Auth + JWT claims + role-based access)
 4. Database schema (Drizzle schema + migrations for all entities)
-5. Producer landing (ISR template + branding system)
+5. Producer landing (Cache Components template + branding system)
 6. Event management (CRUD + lifecycle + publish with revalidation)
 7. Purchase flow (buyer checkout + MercadoPago integration)
 8. Email pipeline (Resend + react-email + QR generation)
@@ -418,8 +444,9 @@ Sentry is the one extra addition — critical for catching payment webhook failu
 - Auth before dashboard, admin, or any authenticated route
 - Drizzle schema before any data operations
 - MercadoPago integration before email pipeline (payment triggers emails)
+- Inngest setup before email pipeline (job queue must be in place)
 - Email pipeline before purchase flow is complete (buyer must receive tickets)
-- ISR + branding before buyer-facing pages go live
+- Cache Components + branding before buyer-facing pages go live
 
 ## Implementation Patterns & Consistency Rules
 
@@ -622,7 +649,7 @@ Client → handleError() maps to UX feedback level:
 - Actions: `src/lib/actions/tenants.ts`
 - DB Schema: `src/lib/db/schema/producers.ts`
 - DB Queries: `src/lib/db/queries/producers.ts`
-- Middleware: `src/middleware.ts` (subdomain resolution + tenant context injection)
+- Proxy: `src/proxy.ts` (subdomain resolution + tenant context injection)
 - RLS Policies: `supabase/migrations/` (tenant isolation policies)
 
 **FR Category: Event Lifecycle (FR-EV-01 to FR-EV-06)**
@@ -672,12 +699,15 @@ Client → handleError() maps to UX feedback level:
 - Actions: `src/lib/actions/admin.ts`
 
 **Cross-Cutting: Multi-Tenancy**
-- Middleware: `src/middleware.ts`
-- Supabase helpers: `src/lib/supabase/server.ts`, `src/lib/supabase/client.ts`, `src/lib/supabase/middleware.ts`
+- Proxy: `src/proxy.ts`
+- Supabase helpers: `src/lib/supabase/server.ts`, `src/lib/supabase/client.ts`, `src/lib/supabase/proxy.ts`
 - RLS migrations: `supabase/migrations/`
 - Every query function: `tenantId` as first parameter
 
-**Cross-Cutting: Email Pipeline**
+**Cross-Cutting: Email Pipeline (Inngest)**
+- Inngest client: `src/lib/inngest/client.ts`
+- Job functions: `src/lib/inngest/functions/`
+- Inngest serve: `src/app/api/inngest/route.ts`
 - Templates: `src/lib/email/templates/`
 - Sender: `src/lib/email/send.ts`
 - QR integration: `src/lib/qr/generate.ts`
@@ -734,13 +764,13 @@ ticktu/
     │   ├── globals.css                 # Tailwind + CSS variable theme layers
     │   ├── layout.tsx                  # Root layout (minimal)
     │   │
-    │   ├── (buyer)/                    # Buyer-facing routes (producer branded, ISR)
+    │   ├── (buyer)/                    # Buyer-facing routes (producer branded, Cache Components)
     │   │   ├── layout.tsx              # Buyer layout (producer theme via CSS vars)
     │   │   ├── [slug]/                 # Producer landing page
-    │   │   │   ├── page.tsx            # ISR: producer branding + event list
+    │   │   │   ├── page.tsx            # Cached ("use cache"): producer branding + event list
     │   │   │   └── events/
     │   │   │       └── [eventId]/
-    │   │   │           ├── page.tsx    # ISR: event details + client ticket availability
+    │   │   │           ├── page.tsx    # Cached ("use cache"): event details + client ticket availability
     │   │   │           ├── checkout/
     │   │   │           │   └── page.tsx  # Purchase flow (client component)
     │   │   │           └── confirmation/
@@ -806,6 +836,8 @@ ticktu/
     │       │   │   └── route.ts       # POST: submit scan result (PWA replay target)
     │       │   └── manifest/
     │       │       └── route.ts       # GET: ticket manifest for offline cache
+    │       ├── inngest/
+    │       │   └── route.ts           # Inngest serve endpoint (registers all job functions)
     │       └── tickets/
     │           └── availability/
     │               └── route.ts       # GET: live ticket availability (buyer-internal, not public API)
@@ -855,7 +887,7 @@ ticktu/
     │   ├── supabase/
     │   │   ├── server.ts              # Server-side Supabase client (cookies-based)
     │   │   ├── client.ts              # Browser-side Supabase client
-    │   │   └── middleware.ts          # Supabase session refresh in middleware
+    │   │   └── proxy.ts              # Supabase session refresh in proxy
     │   ├── db/
     │   │   ├── drizzle.ts             # Drizzle client initialization (NOT a barrel)
     │   │   ├── schema/                # Drizzle table definitions (relations co-located per file)
@@ -911,6 +943,11 @@ ticktu/
     │   │   └── templates/
     │   │       ├── ticket-confirmation.tsx   # react-email: tickets + QR codes
     │   │       └── event-cancelled.tsx       # react-email: cancellation notice
+    │   ├── inngest/
+    │   │   ├── client.ts              # Inngest client initialization
+    │   │   └── functions/
+    │   │       ├── send-ticket-emails.ts   # order/completed → QR + email delivery (3 retries)
+    │   │       └── send-ticket-emails.test.ts
     │   ├── qr/
     │   │   ├── generate.ts            # Cryptographic QR code generation
     │   │   ├── generate.test.ts
@@ -939,7 +976,7 @@ ticktu/
     │   ├── tickets.ts                 # Ticket, TicketType, Batch types
     │   └── auth.ts                    # User roles, JWT claims types
     │
-    ├── middleware.ts                   # Edge middleware: subdomain → surface routing + auth
+    ├── proxy.ts                        # Proxy (Node.js runtime): subdomain → surface routing + auth
     │
     └── sw.ts                          # Serwist service worker entry (validation PWA)
                                        # Includes runtime caching rules for /api/validation/manifest
@@ -966,11 +1003,11 @@ ticktu/
 - Every query in `lib/db/queries/` that touches tenant data takes `tenantId` as first parameter
 - RLS policies enforce tenant isolation at database level (belt-and-suspenders with app-level)
 - Validation app accesses data through Route Handlers only (no direct DB from PWA client)
-- Buyer pages use ISR for cached data + client-side fetch for live availability
+- Buyer pages use Cache Components (`"use cache"`) for cached data + client-side fetch for live availability
 
 **Auth Boundaries:**
 - 4 separate auth contexts never cross: super admin, producer admin, validation codes, buyer (no auth)
-- Middleware resolves which surface based on subdomain before any auth check
+- Proxy (`proxy.ts`) resolves which surface based on subdomain before any auth check
 
 ### Integration Points
 
@@ -982,6 +1019,7 @@ ticktu/
 | Resend | `lib/email/send.ts` | REST API |
 | Supabase Auth | `lib/supabase/server.ts` + `lib/supabase/client.ts` | SDK |
 | Supabase Storage | Direct SDK calls for image upload/retrieval | SDK |
+| Inngest | `lib/inngest/client.ts` → `app/api/inngest/route.ts` | SDK + webhook |
 | Cloudflare | DNS + proxy (infrastructure, no code integration) | Config |
 
 **Internal Data Flows:**
@@ -990,7 +1028,8 @@ ticktu/
 Buyer Purchase:
   Checkout form → createOrder action → DB insert → MercadoPago preference
   → MercadoPago redirect → Payment → IPN webhook → validate payment
-  → waitUntil(generateQR → renderEmail → sendViaResend) → buyer receives tickets
+  → inngest.send("order/completed") → Inngest function: generateQR → renderEmail → sendViaResend
+  → (retries on failure) → buyer receives tickets
 
 Validation Scan:
   QR Scanner → POST /api/validation/scan → verify QR hash → check status
@@ -1004,7 +1043,7 @@ Dashboard Refresh:
 ### File Organization Patterns
 
 **Configuration Files (project root):**
-- `next.config.ts` — Next.js config (Serwist plugin, image domains, rewrites)
+- `next.config.ts` — Next.js config (Serwist plugin, image domains, rewrites, `cacheComponents: true`)
 - `tailwind.config.ts` — Tailwind theme extension + CSS variable references
 - `drizzle.config.ts` — Drizzle Kit connection + migration output path
 - `serwist.config.ts` — PWA manifest, precache config
@@ -1075,6 +1114,7 @@ npm run lint && npm run typecheck && npm run test
 - Supabase Auth JWT + RLS `auth.jwt()->>'tenant_id'` — native integration, no custom auth bridge needed
 - Server Actions + Route Handlers hybrid — official Next.js pattern, no overlap
 - react-email + Resend — same ecosystem, designed to work together
+- Inngest + Vercel — native integration, Inngest runs as Route Handler within the Next.js app
 
 **Pattern Consistency — Aligned:**
 - snake_case DB ↔ camelCase TS via Drizzle column mapping — consistently documented with code example
@@ -1094,10 +1134,10 @@ npm run lint && npm run typecheck && npm run test
 
 | FR Category | FRs | Architectural Support |
 |-------------|-----|----------------------|
-| Tenant Management | FR-TM-01 to 04 | Middleware subdomain routing + RLS + `(admin)/tenants/` |
-| Event Lifecycle | FR-EV-01 to 06 | `(dashboard)/events/` + Server Actions + ISR revalidation |
+| Tenant Management | FR-TM-01 to 04 | Proxy subdomain routing + RLS + `(admin)/tenants/` |
+| Event Lifecycle | FR-EV-01 to 06 | `(dashboard)/events/` + Server Actions + Cache Components revalidation |
 | Ticketing & Pricing | FR-TK-01 to 05 | Schema (ticket-types, batches) + QR lib + fee calculation pattern |
-| Purchase & Payment | FR-PU-01 to 09 | `(buyer)/checkout/` + MercadoPago adapter + webhook + waitUntil email |
+| Purchase & Payment | FR-PU-01 to 09 | `(buyer)/checkout/` + MercadoPago adapter + webhook + Inngest email pipeline |
 | Attribution & RRPP | FR-RR-01 to 03 | `rrpp-links` schema + dashboard analytics queries |
 | Analytics & Reporting | FR-AN-01 to 04 | Dashboard polling + analytics queries + settlement page |
 | Validation & Offline | FR-VA-01 to 06 | PWA routes + Serwist + IndexedDB + sync pure functions + scan audit |
@@ -1107,11 +1147,11 @@ npm run lint && npm run typecheck && npm run test
 
 | NFR Category | Key NFRs | Architectural Support |
 |-------------|----------|----------------------|
-| Performance | PE-01 to 04 | ISR edge caching (<3s mobile), QR scan pure functions (<2s), waitUntil email (<60s), Vercel edge functions (<500ms p95) |
-| Availability | AV-01 to 03 | Vercel multi-region + Cloudflare CDN (99.9%), payment fault isolation (waitUntil), offline IndexedDB cache |
+| Performance | PE-01 to 04 | Cache Components edge caching (<3s mobile), QR scan pure functions (<2s), Inngest email (<60s), Vercel functions (<500ms p95) |
+| Availability | AV-01 to 03 | Vercel multi-region + Cloudflare CDN (99.9%), payment fault isolation (Inngest retries), offline IndexedDB cache |
 | Scalability | SC-01 to 03 | Vercel auto-scaling (500 concurrent), PWA local processing (40 scans/min), stateless architecture |
 | Security | SE-01 to 04 | MercadoPago PCI delegation, RLS + app-level tenant isolation, crypto QR generation, separate auth boundaries |
-| Data Integrity | DI-01 to 04 | First-scan-wins sync + queue replay, conflict resolver pure function, webhook idempotency, waitUntil email guarantee |
+| Data Integrity | DI-01 to 04 | First-scan-wins sync + queue replay, conflict resolver pure function, webhook idempotency, Inngest guaranteed delivery |
 | Email Deliverability | EM-01 to 02 | Resend (SPF/DKIM/DMARC support), react-email branded templates |
 
 ### Implementation Readiness Validation
@@ -1166,7 +1206,7 @@ npm run lint && npm run typecheck && npm run test
 - [x] Critical decisions documented with specific libraries
 - [x] Technology stack fully specified (15+ technology choices)
 - [x] Integration patterns defined (MercadoPago, Resend, Supabase)
-- [x] Performance considerations addressed (ISR, edge caching, no Redis)
+- [x] Performance considerations addressed (Cache Components, edge caching, no Redis)
 
 **Implementation Patterns**
 - [x] Naming conventions established (DB, TS, files with examples)
@@ -1189,14 +1229,14 @@ npm run lint && npm run typecheck && npm run test
 **Key Strengths:**
 - Belt-and-suspenders tenant isolation (RLS + app-level) — non-negotiable for payments platform
 - Zero-dependency state management (no Redux/Zustand) — simplicity for MVP
-- ISR + on-demand revalidation — fast buyer experience with zero stale data risk
+- Cache Components + on-demand invalidation (`updateTag`/`revalidateTag`) — fast buyer experience with zero stale data risk
 - Comprehensive test strategy with mandatory tenant isolation tests from day one
 - Clean separation of 4 UI surfaces via route groups with isolated auth boundaries
 
 **Areas for Future Enhancement:**
 - Rate limiting (Cloudflare basic rules → custom middleware if needed)
 - WebSocket upgrade from 30s polling (post-MVP if dashboard UX demands it)
-- Inngest for reliable background jobs (upgrade from waitUntil if retries needed)
+- Inngest step functions for complex multi-step workflows (beyond email delivery)
 - Image optimization patterns (define during first image-heavy story)
 
 ### Implementation Handoff
@@ -1218,6 +1258,7 @@ npm install @supabase/supabase-js @supabase/ssr
 npm install drizzle-orm postgres
 npm install -D drizzle-kit
 npm install @serwist/next
+npm install inngest
 ```
 
-Follow with: middleware.ts (subdomain routing) → Supabase Auth setup → Drizzle schema → RLS policies
+Follow with: proxy.ts (subdomain routing) → Supabase Auth setup → Drizzle schema → RLS policies → Inngest setup

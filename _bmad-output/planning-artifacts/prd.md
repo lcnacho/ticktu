@@ -25,7 +25,7 @@ classification:
 lastEdited: '2026-03-14'
 editHistory:
   - date: '2026-03-14'
-    changes: 'Added Executive Summary, Functional Requirements (36 FRs), Non-Functional Requirements (20 NFRs)'
+    changes: 'Added Executive Summary, Functional Requirements (39 FRs — FR-PU-08 removed/consolidated, gap preserved for ID stability), Non-Functional Requirements (20 NFRs)'
 ---
 
 # Product Requirements Document - Ticktu
