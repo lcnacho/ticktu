@@ -1,5 +1,5 @@
 # generated: 2026-03-19
-# last_updated: 2026-03-19
+# last_updated: 2026-03-20
 # project: ticktu
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-19
-last_updated: 2026-03-19
+last_updated: 2026-03-20
 project: ticktu
 project_key: NOKEY
 tracking_system: file-system
@@ -124,7 +124,9 @@ development_status:
   # Pre-Production Stabilization
   # Phase 1: Critical Test Coverage + Code Review Fixes — DONE (2026-03-20)
   stabilization-phase-1: done
-  # Phase 2: E2E Smoke Suite (Playwright) — pending
-  stabilization-phase-2: backlog
-  # Phase 3: Production Hardening — pending
-  stabilization-phase-3: backlog
+  # Phase 2: E2E Smoke Suite (Playwright) — DONE (2026-03-20)
+  stabilization-phase-2: done
+  # Phase 3: Production Hardening — DONE (2026-03-20)
+  # Env audit, Sentry, Resend wiring, RLS tests, DNS/Cloudflare, Vercel deploy
+  # Pending: Supabase prod migrations, manual walkthrough
+  stabilization-phase-3: done
