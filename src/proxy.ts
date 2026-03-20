@@ -76,11 +76,12 @@ export async function proxy(request: NextRequest) {
   }
 
   // Producer subdomain
-  requestHeaders.set("x-surface", "buyer");
   requestHeaders.set("x-tenant-slug", subdomain);
 
   // Dashboard routes require producer_admin auth
-  if (pathname.startsWith("/dashboard") && !isPublicPath(pathname)) {
+  if (pathname.startsWith("/dashboard")) {
+    requestHeaders.set("x-surface", "dashboard");
+
     const supabase = createSupabaseProxyClient(request, response);
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -98,9 +99,18 @@ export async function proxy(request: NextRequest) {
     requestHeaders.set("x-tenant-id", tenantId);
     requestHeaders.set("x-user-id", user.id);
     requestHeaders.set("x-user-role", user.app_metadata?.role ?? "producer_admin");
+
+    // Rewrite /dashboard/... → /... so (dashboard) route group pages match
+    const dashboardPath = pathname.replace(/^\/dashboard/, "") || "/";
+    const rewriteUrl = new URL(dashboardPath, request.url);
+    return NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } });
   }
 
-  return NextResponse.next({ request: { headers: requestHeaders } });
+  // Buyer surface — rewrite / → /{slug} so (buyer)/[slug] pages match
+  requestHeaders.set("x-surface", "buyer");
+  const buyerPath = `/${subdomain}${pathname}`;
+  const rewriteUrl = new URL(buyerPath, request.url);
+  return NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } });
 }
 
 export const config = {

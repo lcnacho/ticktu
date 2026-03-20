@@ -132,7 +132,7 @@ async function EventDetailContent({
     <>
       <div className="mb-2">
         <a
-          href="/events"
+          href="/dashboard/events"
           className="text-sm text-gray-500 hover:text-gray-700"
         >
           &larr; Volver a eventos

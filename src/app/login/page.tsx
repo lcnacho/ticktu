@@ -26,8 +26,8 @@ function LoginPage() {
       return;
     }
 
-    // Redirect based on current subdomain surface
-    window.location.href = "/";
+    // Redirect to dashboard after login
+    window.location.href = "/dashboard";
   }
 
   return (

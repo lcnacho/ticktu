@@ -10,7 +10,7 @@ type EventCardProps = {
 export function EventCard({ event }: EventCardProps) {
   return (
     <a
-      href={`/events/${event.id}`}
+      href={`/dashboard/events/${event.id}`}
       className="block rounded-lg border bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
     >
       <div className="flex items-start justify-between gap-3">

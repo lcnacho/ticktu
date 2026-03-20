@@ -76,7 +76,7 @@ export default function NewEventPage() {
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="mb-6">
         <a
-          href="/events"
+          href="/dashboard/events"
           className="text-sm text-gray-500 hover:text-gray-700"
         >
           &larr; Volver a eventos
@@ -211,7 +211,7 @@ export default function NewEventPage() {
             {isSubmitting ? "Creando..." : "Crear evento"}
           </button>
           <a
-            href="/events"
+            href="/dashboard/events"
             className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Cancelar

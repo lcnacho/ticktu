@@ -34,7 +34,7 @@ export function CustomerTable({ customers, currency }: CustomerTableProps) {
       startTransition(() => {
         const params = new URLSearchParams();
         if (value) params.set("q", value);
-        router.replace(`/customers?${params.toString()}`);
+        router.replace(`/dashboard/customers?${params.toString()}`);
       });
     }, 300);
   }
