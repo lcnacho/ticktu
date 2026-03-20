@@ -128,5 +128,12 @@ development_status:
   stabilization-phase-2: done
   # Phase 3: Production Hardening — DONE (2026-03-20)
   # Env audit, Sentry, Resend wiring, RLS tests, DNS/Cloudflare, Vercel deploy
-  # Pending: Supabase prod migrations, manual walkthrough
   stabilization-phase-3: done
+
+  # Production Deployment — DONE (2026-03-20)
+  # Supabase prod: 13 tables + 10 RLS migrations applied via MCP
+  # Proxy routing: URL rewrites for buyer/dashboard surfaces
+  # MercadoPago webhook configured (test mode)
+  # First tenant "Bresh" created + manual walkthrough passed
+  # Verified: login, dashboard, create event, ticket types, public landing
+  production-deployment: done
