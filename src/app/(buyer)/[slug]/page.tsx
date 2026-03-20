@@ -89,7 +89,7 @@ async function ProducerLandingContent({
                 date={event.date}
                 venue={event.venue}
                 imageUrl={event.imageUrl}
-                href={`/${slug}/events/${event.slug}`}
+                href={`/events/${event.slug}`}
               />
             ))}
           </div>

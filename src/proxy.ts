@@ -85,11 +85,8 @@ export async function proxy(request: NextRequest) {
   if (pathname.startsWith("/dashboard")) {
     requestHeaders.set("x-surface", "dashboard");
 
-    const cookies = request.cookies.getAll();
-    const names = cookies.map(c => c.name).join("|");
     const supabase = createSupabaseProxyClient(request, response);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    console.error(`[pd] ${names} u=${user?.id ?? "NO"} e=${authError?.message ?? "ok"}`);
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
       const loginUrl = new URL("/login", request.url);

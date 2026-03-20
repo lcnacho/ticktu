@@ -47,7 +47,7 @@ async function CheckoutContent({
       <main className="px-4 pb-32 pt-6">
         <div className="mb-4">
           <a
-            href={`/${slug}/events/${eventSlug}`}
+            href={`/events/${eventSlug}`}
             className="text-sm text-[var(--producer-primary,#6366f1)] hover:opacity-80"
           >
             &larr; Volver al evento
