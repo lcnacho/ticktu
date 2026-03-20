@@ -40,7 +40,6 @@ export async function proxy(request: NextRequest) {
   }
 
   const subdomain = extractSubdomain(host);
-  const { pathname } = request.nextUrl;
 
   // No subdomain — default surface (marketing/landing)
   if (!subdomain) {
