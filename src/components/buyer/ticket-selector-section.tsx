@@ -8,7 +8,6 @@ import { formatMoney, calculateServiceFee } from "@/lib/utils/money";
 
 type TicketSelectorSectionProps = {
   eventSlug: string;
-  producerSlug: string;
   ticketTypes: TicketType[];
   currency: string;
   feePercentage: number;
@@ -18,7 +17,6 @@ type TicketSelectorSectionProps = {
 
 export function TicketSelectorSection({
   eventSlug,
-  producerSlug,
   ticketTypes,
   currency,
   feePercentage,
@@ -56,7 +54,7 @@ export function TicketSelectorSection({
     if (rrppRef) params.set("ref", rrppRef);
 
     router.push(
-      `/${producerSlug}/events/${eventSlug}/checkout?${params.toString()}`,
+      `/events/${eventSlug}/checkout?${params.toString()}`,
     );
   }
 

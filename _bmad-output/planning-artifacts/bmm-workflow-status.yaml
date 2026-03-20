@@ -2,7 +2,7 @@
 # Tracks completed workflows and their output artifacts
 
 project_name: ticktu
-last_updated: 2026-03-17
+last_updated: 2026-03-20
 
 # Completed Workflows
 workflow_status:
@@ -18,10 +18,48 @@ workflow_status:
     output_file: /home/nacholc/proyectos/ticktu/_bmad-output/planning-artifacts/ux-design-specification.md
     author: Nacholc
     notes: Complete UX design specification covering all surfaces (buyer, dashboard, validation app, admin), design system (shadcn/ui + Tailwind), UX consistency patterns, responsive strategy, and accessibility (WCAG Level A)
+  create-architecture:
+    status: completed
+    completed_date: 2026-03-19
+    output_file: /home/nacholc/proyectos/ticktu/_bmad-output/planning-artifacts/architecture.md
+    author: Nacholc
+  create-prd:
+    status: completed
+    completed_date: 2026-03-14
+    output_file: /home/nacholc/proyectos/ticktu/_bmad-output/planning-artifacts/prd.md
+    author: Nacholc
+    notes: 39 FRs across 8 domains, 20 NFRs
+  create-epics-and-stories:
+    status: completed
+    completed_date: 2026-03-19
+    output_file: /home/nacholc/proyectos/ticktu/_bmad-output/planning-artifacts/epics.md
+    author: Nacholc
+    notes: 10 epics, all functional logic implemented. UX layer not implemented (see correction below).
+  implementation-readiness:
+    status: completed
+    completed_date: 2026-03-19
+    output_file: /home/nacholc/proyectos/ticktu/_bmad-output/planning-artifacts/implementation-readiness-report-2026-03-19.md
+    author: Nacholc
+  implementation:
+    status: partially-complete
+    notes: >
+      CORRECTED 2026-03-20: All 10 epics functional logic is done (data plumbing,
+      API routes, queries, business logic). Production deployed with first tenant "Bresh".
+      However, the UX Design Specification was largely NOT implemented:
+      - No dashboard sidebar/navigation (layout is empty <div>)
+      - No green retro-arcade theme (default shadcn gray)
+      - 1 of 16 shadcn components installed
+      - All colors hardcoded (bg-white, bg-indigo-600, text-gray-*)
+      - Zero animations, skeleton loaders, transitions
+      - Buyer white-label theming shallow (only --producer-primary works)
+      - Validation app missing scan history, PWA manifest
+      - Admin missing auth guard, navigation, tenant editing
+      Root cause: UX structural elements were assumed infrastructure —
+      no story was ever assigned to build them.
 
 # Suggested Next Workflows
 next_recommended:
-  - workflow: create-architecture
-    reason: Define technical architecture with UX context as input
   - workflow: create-epics-and-stories
-    reason: Break down UX and PRD requirements into implementable epics
+    reason: Scope new epic(s) for UX Design System & Polish — the missing UX layer
+  - workflow: party-mode
+    reason: Team discussion to prioritize UX gaps before first real event

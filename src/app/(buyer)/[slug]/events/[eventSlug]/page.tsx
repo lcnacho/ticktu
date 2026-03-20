@@ -119,7 +119,6 @@ async function PublicEventContent({
 
         <TicketSelectorSection
           eventSlug={eventSlug}
-          producerSlug={slug}
           ticketTypes={ticketTypes}
           currency={producer.currency}
           feePercentage={producer.feePercentage}
