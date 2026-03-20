@@ -106,6 +106,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } });
   }
 
+  // Public paths — pass through without rewrite
+  if (isPublicPath(pathname)) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
   // Buyer surface — rewrite / → /{slug} so (buyer)/[slug] pages match
   requestHeaders.set("x-surface", "buyer");
   const buyerPath = `/${subdomain}${pathname}`;
