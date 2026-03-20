@@ -40,8 +40,11 @@ export async function proxy(request: NextRequest) {
 
   const subdomain = extractSubdomain(host);
 
-  // No subdomain — default surface (marketing/landing)
+  // No subdomain — redirect to login (no marketing page yet)
   if (!subdomain) {
+    if (!isPublicPath(pathname)) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
     return NextResponse.next();
   }
 
