@@ -33,6 +33,8 @@ function isPublicPath(pathname: string): boolean {
 
 export async function proxy(request: NextRequest) {
   const host = request.headers.get("host");
+  const { pathname } = request.nextUrl;
+  console.error(`[proxy] hit: ${host}${pathname}`);
   if (!host) {
     return NextResponse.next();
   }
