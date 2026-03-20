@@ -103,7 +103,13 @@ export async function proxy(request: NextRequest) {
     // Rewrite /dashboard/... → /... so (dashboard) route group pages match
     const dashboardPath = pathname.replace(/^\/dashboard/, "") || "/";
     const rewriteUrl = new URL(dashboardPath, request.url);
-    return NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } });
+    const rewriteResponse = NextResponse.rewrite(rewriteUrl, { request: { headers: requestHeaders } });
+
+    // Carry over cookies from supabase auth refresh
+    for (const cookie of response.cookies.getAll()) {
+      rewriteResponse.cookies.set(cookie.name, cookie.value, cookie);
+    }
+    return rewriteResponse;
   }
 
   // Public paths — pass through without rewrite
