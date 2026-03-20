@@ -3,7 +3,7 @@ import { createSupabaseProxyClient } from "@/lib/supabase/proxy";
 
 const ADMIN_SUBDOMAIN = "admin";
 const AUTH_REQUIRED_PATHS = ["/dashboard", "/admin"];
-const PUBLIC_PATHS = ["/login", "/api/webhooks", "/api/inngest"];
+const PUBLIC_PATHS = ["/login", "/api/"];
 
 export function extractSubdomain(host: string): string | null {
   const hostname = host.split(":")[0];
